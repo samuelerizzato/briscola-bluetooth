@@ -1,40 +1,34 @@
-import 'package:briscola/ble/ble_game_peripheral_service.dart';
+import 'package:briscola/ble/ble_game_service.dart';
 import 'package:briscola/snackbar.dart';
 
 import 'briscola_world.dart';
 import 'components/card.dart';
 
-class BriscolaWorldHost extends BriscolaWorld {
-  final BleGamePeripheralService _peripheral;
-  final void Function() _onSetupError;
+class BriscolaWorldBle extends BriscolaWorld {
+  final BleGameService _bleService;
+  final void Function()? _onSetup;
 
-  BriscolaWorldHost(
+  BriscolaWorldBle(
     super._initialSeed,
     super.context,
-    this._peripheral,
-    this._onSetupError,
+    this._bleService,
+    this._onSetup,
   ) {
-    _peripheral.onDrawCardWriteRequest = triggerOpponentDraw;
-    _peripheral.onPlayCardWriteRequest = (request) {
+    _bleService.registerOpponentEventHandlers(triggerOpponentDraw, (request) {
       onRemotePlayCard(request.card);
-    };
+    });
   }
 
   @override
   Future<void> setup() async {
     super.setup();
-    try {
-      await _peripheral.setupBleGame();
-    } catch (e) {
-      SnackbarManager.show('Cannot setup game');
-      _onSetupError();
-    }
+    _onSetup?.call();
   }
 
   @override
   Future<void> onLocalPlayCard(Card card) async {
     try {
-      await _peripheral.notifyPlayCard(card);
+      await _bleService.sendPlayCardAction(card);
       super.onLocalPlayCard(card);
     } catch (e) {
       SnackbarManager.show('Error while sending card');
@@ -44,7 +38,7 @@ class BriscolaWorldHost extends BriscolaWorld {
   @override
   Future<void> handlePlayerDraw() async {
     try {
-      await _peripheral.notifyDrawCard();
+      await _bleService.sendDrawCardAction();
       super.handlePlayerDraw();
     } catch (e) {
       SnackbarManager.show('Error while drawing card');

@@ -9,7 +9,7 @@ import 'package:briscola/ble/ble_game_peripheral_service.dart';
 import 'package:briscola/ble/ble_gatt_services.dart';
 import 'package:briscola/ble/conversions.dart';
 import 'package:briscola/ble/device_connection.dart';
-import 'package:briscola/game/briscola_world_host.dart';
+import 'package:briscola/game/briscola_world_ble.dart';
 import 'package:briscola/game/components/playing_surface.dart';
 import 'package:briscola/game/game_result.dart';
 import 'package:briscola/ui/screens/game_screen.dart';
@@ -330,12 +330,19 @@ class _PeripheralLobbyScreenState extends State<PeripheralLobbyScreen> {
     );
 
     return GameScreen(
-      BriscolaWorldHost(seed, stateMachine, peripheralService, () {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (route) => false,
-        );
+      BriscolaWorldBle(seed, stateMachine, peripheralService, () async {
+        try {
+          await peripheralService.setupBleGame();
+        } catch (e) {
+          SnackbarManager.show('Cannot setup game');
+          if (context.mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+              (route) => false,
+            );
+          }
+        }
       }),
       () {
         peripheralService.dispose();

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:briscola/ble/ble_game_service.dart';
 import 'package:briscola/ble/conversions.dart';
 import 'package:briscola/ble/messages/card_play_message.dart';
 import 'package:briscola/ble/messages/game_setup_message.dart';
@@ -9,7 +10,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'ble_gatt_services.dart';
 
-class BleGameCentralService {
+class BleGameCentralService implements BleGameService {
   final BluetoothDevice _device;
   List<BluetoothService> _services = [];
 
@@ -19,7 +20,8 @@ class BleGameCentralService {
 
   BleGameCentralService(this._device);
 
-  void setNotificationCallbacks(
+  @override
+  void registerOpponentEventHandlers(
     void Function() drawCardCallback,
     void Function(CardPlayMessage) playCardCallback,
   ) {
@@ -79,7 +81,8 @@ class BleGameCentralService {
     return GameSetupMessage.fromBytes(Uint8List.fromList(bytes));
   }
 
-  Future<void> sendDrawCard() {
+  @override
+  Future<void> sendDrawCardAction() {
     Guid gameStateServiceId = Conversions.uuidToGuid(
       BleGattServices.gameStateServiceUuid,
     );
@@ -95,7 +98,8 @@ class BleGameCentralService {
     return retryRequest(() => gameStateCharacteristic.write(List.empty()));
   }
 
-  Future<void> sendCard(Card card) async {
+  @override
+  Future<void> sendPlayCardAction(Card card) async {
     Guid gameStateServiceId = Conversions.uuidToGuid(
       BleGattServices.gameStateServiceUuid,
     );

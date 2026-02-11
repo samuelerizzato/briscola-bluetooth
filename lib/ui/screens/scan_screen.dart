@@ -5,7 +5,7 @@ import 'package:briscola/ble/ble_gatt_services.dart';
 import 'package:briscola/ble/conversions.dart';
 import 'package:briscola/ble/device_connection.dart';
 import 'package:briscola/ble/messages/game_setup_message.dart';
-import 'package:briscola/game/briscola_world_central.dart';
+import 'package:briscola/game/briscola_world_ble.dart';
 import 'package:briscola/game/game_result.dart';
 import 'package:briscola/ui/screens/game_result_screen.dart';
 import 'package:briscola/snackbar.dart';
@@ -168,7 +168,7 @@ class _ScanScreenState extends State<ScanScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => GameScreen(
-          BriscolaWorldCentral(response.seed, stateMachine, centralService),
+          BriscolaWorldBle(response.seed, stateMachine, centralService, null),
           () {
             centralService.dispose();
             stateMachine.dispose();

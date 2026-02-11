@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
+import 'package:briscola/ble/ble_game_service.dart';
 import 'package:briscola/ble/conversions.dart';
 import 'package:briscola/ble/messages/card_play_message.dart';
 import 'package:briscola/ble/messages/game_setup_message.dart';
@@ -11,17 +12,26 @@ import 'package:briscola/game/components/playing_surface.dart';
 
 import 'ble_gatt_services.dart';
 
-class BleGamePeripheralService {
+class BleGamePeripheralService implements BleGameService {
   final PeripheralManager _manager = PeripheralManager();
   final Central _central;
   late final StreamSubscription _gameStateReadRequestSubscription;
   late final StreamSubscription _gameStateWriteRequestSubscription;
-  void Function()? onDrawCardWriteRequest;
-  void Function(CardPlayMessage request)? onPlayCardWriteRequest;
+  void Function()? _onDrawCardWriteRequest;
+  void Function(CardPlayMessage request)? _onPlayCardWriteRequest;
   final int _seed;
   final PlayerType _leadPlayer;
 
   BleGamePeripheralService(this._central, this._seed, this._leadPlayer);
+
+  @override
+  void registerOpponentEventHandlers(
+      void Function() onDrawCard,
+      void Function(CardPlayMessage message) onPlayCard,
+      ) {
+    _onDrawCardWriteRequest = onDrawCard;
+    _onPlayCardWriteRequest = onPlayCard;
+  }
 
   Future<void> setupBleGame() async {
     _gameStateReadRequestSubscription = _manager.characteristicReadRequested
@@ -86,13 +96,14 @@ class BleGamePeripheralService {
 
     Uint8List bytes = args.request.value;
     if (bytes.isEmpty) {
-      onDrawCardWriteRequest?.call();
+      _onDrawCardWriteRequest?.call();
     } else {
-      onPlayCardWriteRequest?.call(CardPlayMessage.fromBytes(bytes));
+      _onPlayCardWriteRequest?.call(CardPlayMessage.fromBytes(bytes));
     }
   }
 
-  Future<void> notifyDrawCard() => retryRequest(
+  @override
+  Future<void> sendDrawCardAction() => retryRequest(
     () => _manager.notifyCharacteristic(
       _central,
       BleGattServices.gameStateCharacteristic,
@@ -100,7 +111,8 @@ class BleGamePeripheralService {
     ),
   );
 
-  Future<void> notifyPlayCard(Card card) => retryRequest(
+  @override
+  Future<void> sendPlayCardAction(Card card) => retryRequest(
     () => _manager.notifyCharacteristic(
       _central,
       BleGattServices.gameStateCharacteristic,
