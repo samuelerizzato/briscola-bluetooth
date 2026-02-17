@@ -9,6 +9,7 @@ void main() {
   runApp(
     MaterialApp(
       title: 'Briscola',
+      theme: ThemeData(fontFamily: 'LilitaOne'),
       home: const HomeScreen(),
       navigatorObservers: [BluetoothAdapterStateObserver()],
       scaffoldMessengerKey: SnackbarManager.scaffoldKey,

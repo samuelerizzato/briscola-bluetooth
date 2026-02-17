@@ -32,24 +32,17 @@ class _HomeScreen extends State<StatefulWidget> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            RichText(
-              text: TextSpan(
+            Text.rich(
+              TextSpan(
                 children: [
                   TextSpan(
                     text: 'Briscola',
-                    style: TextStyle(
-                      fontSize: 50.0,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
+                    style: const TextStyle(fontSize: 50.0),
                   ),
                   WidgetSpan(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 1.0),
-                      child: Icon(
-                        Icons.bluetooth,
-                        size: 50.0,
-                      ),
+                      child: Icon(Icons.bluetooth, size: 50.0),
                     ),
                   ),
                 ],

@@ -22,7 +22,7 @@ class GameResultScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Text(message, style: Theme.of(context).textTheme.displayMedium),
+            Text(message, style: TextStyle(fontSize: 50.0)),
             Column(
               children: [
                 Table(
@@ -30,14 +30,16 @@ class GameResultScreen extends StatelessWidget {
                     TableRow(
                       children: [
                         Container(
-                          padding: EdgeInsets.only(right: 5.0),
+                          padding: EdgeInsets.only(right: 10.0),
                           alignment: AlignmentGeometry.centerRight,
                           child: Text(
                             'Your score',
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ),
-                        Center(
+                        Container(
+                          padding: EdgeInsets.only(left: 10.0),
+                          alignment: AlignmentGeometry.centerLeft,
                           child: Text(
                             '${result.points} points',
                             style: Theme.of(context).textTheme.titleLarge,
@@ -48,14 +50,16 @@ class GameResultScreen extends StatelessWidget {
                     TableRow(
                       children: [
                         Container(
-                          padding: EdgeInsets.only(right: 5.0),
+                          padding: EdgeInsets.only(right: 10.0),
                           alignment: AlignmentGeometry.centerRight,
                           child: Text(
                             'Opponent score',
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ),
-                        Center(
+                        Container(
+                          padding: EdgeInsets.only(left: 10.0),
+                          alignment: AlignmentGeometry.centerLeft,
                           child: Text(
                             '${result.opponentPoints} points',
                             style: Theme.of(context).textTheme.titleLarge,
@@ -71,7 +75,10 @@ class GameResultScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const HomeScreen(),
+                    settings: RouteSettings(name: '/'),
+                  ),
                   (route) => false,
                 );
               },
