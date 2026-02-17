@@ -41,17 +41,17 @@ class StateMachine {
       decideState = DecideState(),
       gameOverState = GameOverState();
 
-  void initialize(GameState state) {
+  Future<void> initialize(GameState state) async {
     _currentState = state;
-    state.enter(this);
+    await state.enter(this);
 
     _stateChangeController.add(state);
   }
 
-  void transitionTo(GameState nextState) {
-    _currentState?.exit(this);
+  Future<void> transitionTo(GameState nextState) async {
+    await _currentState?.exit(this);
     _currentState = nextState;
-    nextState.enter(this);
+    await nextState.enter(this);
 
     _stateChangeController.add(nextState);
   }

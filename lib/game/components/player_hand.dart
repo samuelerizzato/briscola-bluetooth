@@ -16,9 +16,10 @@ class PlayerHand extends Hand with HasWorldReference<BriscolaWorld> {
   }
 
   @override
-  void removeCard(Card card) {
-    card.handleTap = null;
-    super.removeCard(card);
+  Card removeCard(Card card) {
+    final removedCard = super.removeCard(card);
+    removedCard.handleTap = null;
+    return removedCard;
   }
 
   void _playCard(Card card) {

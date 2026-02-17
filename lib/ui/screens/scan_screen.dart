@@ -1,21 +1,16 @@
 import 'dart:async';
+import 'dart:developer';
+import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'package:briscola/ble/ble_game_central_service.dart';
 import 'package:briscola/ble/ble_gatt_services.dart';
 import 'package:briscola/ble/conversions.dart';
 import 'package:briscola/ble/device_connection.dart';
 import 'package:briscola/ble/messages/game_setup_message.dart';
-import 'package:briscola/game/briscola_world_ble.dart';
-import 'package:briscola/game/game_result.dart';
-import 'package:briscola/ui/screens/game_result_screen.dart';
-import 'package:briscola/snackbar.dart';
-import 'package:briscola/game/states/game_context.dart';
-import 'package:briscola/game/states/state_machine.dart';
+import 'package:briscola/ui/screens/client_game_screen.dart';
 import 'package:briscola/ui/widgets/scan_result_tile.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-
-import 'game_screen.dart';
+import 'package:briscola/snackbar.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -61,6 +56,24 @@ class _ScanScreenState extends State<ScanScreen> {
     super.dispose();
   }
 
+  Future<void> scanForDevices() async {
+    try {
+      for (var device in FlutterBluePlus.connectedDevices) {
+        device.disconnect();
+      }
+      final serviceUuid = Guid("12345678-1234-5678-1234-56789abcdef0");
+      await FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 10),
+        withServices: [serviceUuid],
+      );
+    } catch (e) {
+      SnackbarManager.show('An error occurred while starting scan');
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   void handleDeviceTap(BluetoothDevice device, int index) async {
     setState(() {
       _loadingItemsIndexes.add(index);
@@ -82,11 +95,28 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
+  void disconnectDevice(BluetoothDevice device, int index) async {
+    SnackbarManager.show('Disconnecting...');
+
+    try {
+      await device.disconnect();
+    } catch (e) {
+      SnackbarManager.show('Error disconnecting from device.');
+    } finally {
+      setState(() {
+        _loadingItemsIndexes.remove(index);
+      });
+    }
+  }
+
   Future<void> connectToDevice(BluetoothDevice device, int index) async {
     for (final connectedDevice in FlutterBluePlus.connectedDevices) {
       await connectedDevice.disconnect();
     }
-    device.connect(license: License.free, timeout: const Duration(seconds: 10));
+    return device.connect(
+      license: License.free,
+      timeout: const Duration(seconds: 10),
+    );
   }
 
   void discoverDeviceServices(BluetoothDevice device) async {
@@ -119,6 +149,7 @@ class _ScanScreenState extends State<ScanScreen> {
           .firstOrNull;
       await gameStartCharacteristic?.write(Conversions.boolToUint8List(true));
     } catch (e) {
+      log(e.toString());
       SnackbarManager.show('Error during connection setup');
     }
   }
@@ -151,64 +182,17 @@ class _ScanScreenState extends State<ScanScreen> {
   ) {
     if (!mounted) return;
 
-    final stateMachine = StateMachine(
-      GameContext(response.leadPlayer, (GameResult result) {
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute<void>(
-              builder: (context) => GameResultScreen(result: result),
-            ),
-          );
-        }
-      }),
-    );
-
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => GameScreen(
-          BriscolaWorldBle(response.seed, stateMachine, centralService, null),
-          () {
-            centralService.dispose();
-            stateMachine.dispose();
-          },
+        builder: (context) => ClientGameScreen(
+          response.seed,
+          response.leadPlayer,
+          centralService,
         ),
         settings: RouteSettings(name: '/GameScreen', arguments: connection),
       ),
     );
-  }
-
-  void disconnectDevice(BluetoothDevice device, int index) async {
-    SnackbarManager.show('Disconnecting...');
-
-    try {
-      await device.disconnect();
-    } catch (e) {
-      SnackbarManager.show('Error disconnecting from device.');
-    } finally {
-      setState(() {
-        _loadingItemsIndexes.remove(index);
-      });
-    }
-  }
-
-  Future<void> scanForDevices() async {
-    try {
-      for (var device in FlutterBluePlus.connectedDevices) {
-        device.disconnect();
-      }
-      final serviceUuid = Guid("12345678-1234-5678-1234-56789abcdef0");
-      await FlutterBluePlus.startScan(
-        timeout: const Duration(seconds: 10),
-        withServices: [serviceUuid],
-      );
-    } catch (e) {
-      SnackbarManager.show('An error occurred while starting scan');
-    }
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   @override

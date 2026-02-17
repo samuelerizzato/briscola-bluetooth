@@ -1,13 +1,24 @@
+import 'dart:async';
+import 'dart:math';
+import 'dart:developer' as dev;
+
 import 'package:briscola/game/briscola_game.dart';
-import 'package:flame/components.dart';
+import 'package:briscola/game/briscola_world.dart';
+import 'package:briscola/game/components/playing_surface.dart';
+import 'package:briscola/game/game_result.dart';
+import 'package:briscola/game/states/game_context.dart';
+import 'package:briscola/game/states/opponent_draw_state.dart';
+import 'package:briscola/game/states/opponent_turn_state.dart';
+import 'package:briscola/game/states/state_machine.dart';
+import 'package:briscola/game/game_server.dart';
+import 'package:briscola/snackbar.dart';
+import 'package:briscola/ui/screens/game_result_screen.dart';
+import 'package:briscola/ui/widgets/dialogs.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 class GameScreen extends StatefulWidget {
-  final World _world;
-  final void Function() _onDispose;
-
-  const GameScreen(this._world, this._onDispose, {super.key});
+  const GameScreen({super.key});
 
   @override
   State<StatefulWidget> createState() => _GameScreenState();
@@ -15,27 +26,86 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late final BriscolaGame _game;
+  late final GameServer _server;
+  late final StateMachine _stateMachine;
+
+  StreamSubscription? _gameStateChangedSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _stateMachine = StateMachine(
+      GameContext(PlayerType.local, (GameResult result) {
+        Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => GameResultScreen(result: result),
+          ),
+        );
+      }),
+    );
+
+    final world = BriscolaWorld(
+      Random().nextInt(256),
+      _stateMachine,
+      (hand, card) {
+        _server.applyPlayCard(hand, card);
+      },
+      (hand) {
+        _server.applyDrawCard(hand);
+      },
+    );
+
+    _server = GameServer(world, _stateMachine.context);
+    _gameStateChangedSubscription = _stateMachine.stateChanged.listen((state) {
+      if (state is OpponentTurnState) {
+        final hand = _server.opponentHand;
+        if (!_server.applyPlayCard(hand, hand.cards.last)) {
+          SnackbarManager.show('Opponent can\'t play the card');
+        }
+      } else if (state is OpponentDrawState) {
+        dev.log('Entered opponent DRAW');
+        if (!_server.applyDrawCard(_server.opponentHand)) {
+          SnackbarManager.show('Opponent can\'t draw a card');
+        }
+      }
+    });
+
+    _game = BriscolaGame(world);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Game')),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [GameWidget(game: _game)],
+      body: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (bool didPop, Object? result) async {
+          if (didPop) return;
+
+          final bool shouldPop =
+              await Dialogs.showBackDialog(context, _stopGame) ?? false;
+          if (context.mounted && shouldPop) {
+            Navigator.pop(context);
+          }
+        },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [GameWidget(game: _game)],
+        ),
       ),
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _game = BriscolaGame(widget._world);
+  void _stopGame() {
+    Navigator.pop(context, true);
   }
 
   @override
   void dispose() {
-    widget._onDispose();
+    _gameStateChangedSubscription?.cancel();
+    _stateMachine.dispose();
     super.dispose();
   }
 }

@@ -11,7 +11,7 @@ import 'game_context.dart';
 
 class TurnEndState implements GameState {
   @override
-  void enter(StateMachine stateMachine) {
+  Future<void> enter(StateMachine stateMachine) async {
     log('entered turn end state');
     GameContext ctx = stateMachine.context;
     PlayingSurface surface = ctx.playingSurface;
@@ -38,9 +38,8 @@ class TurnEndState implements GameState {
         ? ctx.playerTricksPile
         : ctx.opponentTricksPile;
 
-    surface.moveCardsTo(winnerPile, () {
-      stateMachine.transitionTo(stateMachine.decideState);
-    });
+    await surface.moveCardsTo(winnerPile);
+    return stateMachine.transitionTo(stateMachine.decideState);
   }
 
   PlayerType _decideTurnWinner(
@@ -67,5 +66,5 @@ class TurnEndState implements GameState {
   }
 
   @override
-  void exit(StateMachine stateMachine) {}
+  Future<void> exit(StateMachine stateMachine) async {}
 }

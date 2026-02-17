@@ -4,14 +4,17 @@ import 'package:flutter/material.dart';
 
 class GameResultScreen extends StatelessWidget {
   const GameResultScreen({super.key, required this.result});
+
   final GameResult result;
 
   @override
   Widget build(BuildContext context) {
     String message;
-    if (result.points > result.opponentPoints) {
+    if (result.resigned) {
+      message = 'You won, opponent resigned';
+    } else if (result.points! > result.opponentPoints!) {
       message = 'You won';
-    } else if (result.points < result.opponentPoints) {
+    } else if (result.points! < result.opponentPoints!) {
       message = 'You lost';
     } else {
       message = "Draw";

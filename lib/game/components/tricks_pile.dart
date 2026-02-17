@@ -62,11 +62,8 @@ class TricksPile extends PositionComponent with TapCallbacks {
       textRenderer: TextPaint(
         style: material.TextStyle(
           fontSize: 30.0,
-          fontWeight: FontWeight.bold,
-          foreground: Paint()
-            ..style = material.PaintingStyle.stroke
-            ..strokeWidth = 1.5
-            ..color = material.Colors.white
+          fontFamily: 'LilitaOne',
+          color: material.Colors.white
         ),
       ),
       position: pileCenter,

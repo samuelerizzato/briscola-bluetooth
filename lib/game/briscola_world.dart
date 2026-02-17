@@ -34,6 +34,9 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
   final List<Card> _cards = [];
   final int _initialSeed;
   late final StateMachine _stateMachine;
+  final void Function()? _onSetup;
+  final void Function(Hand hand, Card card) _onLocalPlayCard;
+  final void Function(Hand hand) _onLocalDrawCard;
 
   GameContext get _gameContext => _stateMachine.context;
 
@@ -50,7 +53,13 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
   TricksPile get _opponentTricksPile =>
       _stateMachine.context.opponentTricksPile;
 
-  BriscolaWorld(this._initialSeed, this._stateMachine);
+  BriscolaWorld(
+    this._initialSeed,
+    this._stateMachine,
+    this._onLocalPlayCard,
+    this._onLocalDrawCard, [
+    this._onSetup,
+  ]);
 
   @override
   FutureOr<void> onLoad() async {
@@ -126,6 +135,7 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
     _initCards(_initialSeed);
     _dealCards(_initialSeed);
     _initCamera();
+    _onSetup?.call();
   }
 
   void _initCards(int seed) {
@@ -177,41 +187,31 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
     _deck.setBriscola(index);
   }
 
-  Future<void> onLocalPlayCard(Card card) async {
-    _playCard(_playerHand, card);
+  Future<void> applyPlayCard(Hand hand, Card card) {
+    _surface.acquireCard(hand.removeCard(card), hand.type);
+    return _stateMachine.transitionTo(_stateMachine.turnEndState);
   }
 
-  void onRemotePlayCard(Card card) {
-    Card handCard = _opponentHand.cards.firstWhere(
-      (c) => c.rank.value == card.rank.value && c.suit.type == card.suit.type,
-    );
-    handCard.flip();
-    _playCard(_opponentHand, handCard);
-  }
-
-  void _playCard(Hand hand, Card card) {
-    if (hand.isEnabled && _surface.canAcquireCard(hand.type)) {
-      hand.removeCard(card);
-      _surface.acquireCard(card, hand.type);
+  void applyDrawCard(Hand hand) {
+    _deck.drawCard(hand);
+    GameState nextState;
+    if (hand.type == PlayerType.local) {
+      nextState = _opponentHand.canAcquireCard()
+          ? _stateMachine.opponentDrawState
+          : _stateMachine.opponentTurnState;
+    } else {
+      nextState = _playerHand.canAcquireCard()
+          ? _stateMachine.playerDrawState
+          : _stateMachine.playerTurnState;
     }
-    _stateMachine.transitionTo(_stateMachine.turnEndState);
+    _stateMachine.transitionTo(nextState);
+  }
+
+  Future<void> onLocalPlayCard(Card card) async {
+    _onLocalPlayCard(_playerHand, card);
   }
 
   Future<void> handlePlayerDraw() async {
-    assert(!_deck.isEmpty);
-    _deck.drawCard(_playerHand);
-    GameState nextState = _opponentHand.canAcquireCard()
-        ? _stateMachine.opponentDrawState
-        : _stateMachine.opponentTurnState;
-    _stateMachine.transitionTo(nextState);
-  }
-
-  void triggerOpponentDraw() {
-    assert(!_deck.isEmpty);
-    _deck.drawCard(_opponentHand);
-    GameState nextState = _playerHand.canAcquireCard()
-        ? _stateMachine.playerDrawState
-        : _stateMachine.playerTurnState;
-    _stateMachine.transitionTo(nextState);
+    _onLocalDrawCard(_playerHand);
   }
 }

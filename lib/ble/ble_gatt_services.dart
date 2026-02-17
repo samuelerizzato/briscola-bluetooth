@@ -14,8 +14,7 @@ class BleGattServices {
         properties: [
           GATTCharacteristicProperty.read,
           GATTCharacteristicProperty.write,
-          GATTCharacteristicProperty.writeWithoutResponse,
-          GATTCharacteristicProperty.notify,
+          GATTCharacteristicProperty.indicate,
         ],
         permissions: [
           GATTCharacteristicPermission.read,
@@ -54,8 +53,7 @@ class BleGattServices {
         properties: [
           GATTCharacteristicProperty.read,
           GATTCharacteristicProperty.write,
-          GATTCharacteristicProperty.writeWithoutResponse,
-          GATTCharacteristicProperty.notify,
+          GATTCharacteristicProperty.indicate,
         ],
         permissions: [
           GATTCharacteristicPermission.read,

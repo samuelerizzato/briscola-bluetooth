@@ -4,12 +4,12 @@ import 'state_machine.dart';
 
 class OpponentDrawState implements GameState {
   @override
-  void enter(StateMachine stateMachine) {
+  Future<void> enter(StateMachine stateMachine) async {
     stateMachine.context.opponentTricksPile.isActive = true;
   }
 
   @override
-  void exit(StateMachine stateMachine) {
+  Future<void> exit(StateMachine stateMachine) async {
     stateMachine.context.opponentTricksPile.isActive = false;
   }
 }

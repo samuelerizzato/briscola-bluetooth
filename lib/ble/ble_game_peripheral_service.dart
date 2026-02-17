@@ -6,6 +6,7 @@ import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
 import 'package:briscola/ble/ble_game_service.dart';
 import 'package:briscola/ble/conversions.dart';
 import 'package:briscola/ble/messages/card_play_message.dart';
+import 'package:briscola/ble/messages/draw_card_message.dart';
 import 'package:briscola/ble/messages/game_setup_message.dart';
 import 'package:briscola/game/components/card.dart';
 import 'package:briscola/game/components/playing_surface.dart';
@@ -17,8 +18,9 @@ class BleGamePeripheralService implements BleGameService {
   final Central _central;
   late final StreamSubscription _gameStateReadRequestSubscription;
   late final StreamSubscription _gameStateWriteRequestSubscription;
-  void Function()? _onDrawCardWriteRequest;
-  void Function(CardPlayMessage request)? _onPlayCardWriteRequest;
+  void Function()? _onResignRequest;
+  void Function(DrawCardMessage message)? _onDrawCardWriteRequest;
+  Future<void> Function(CardPlayMessage message)? _onPlayCardWriteRequest;
   final int _seed;
   final PlayerType _leadPlayer;
 
@@ -26,11 +28,13 @@ class BleGamePeripheralService implements BleGameService {
 
   @override
   void registerOpponentEventHandlers(
-      void Function() onDrawCard,
-      void Function(CardPlayMessage message) onPlayCard,
-      ) {
+    void Function(DrawCardMessage message) onDrawCard,
+    Future<void> Function(CardPlayMessage message) onPlayCard,
+    void Function() onResign,
+  ) {
     _onDrawCardWriteRequest = onDrawCard;
     _onPlayCardWriteRequest = onPlayCard;
+    _onResignRequest = onResign;
   }
 
   Future<void> setupBleGame() async {
@@ -96,31 +100,43 @@ class BleGamePeripheralService implements BleGameService {
 
     Uint8List bytes = args.request.value;
     if (bytes.isEmpty) {
-      _onDrawCardWriteRequest?.call();
+      _onResignRequest?.call();
+    } else if (bytes.length < 2) {
+      _onDrawCardWriteRequest?.call(DrawCardMessage.fromBytes(bytes));
     } else {
       _onPlayCardWriteRequest?.call(CardPlayMessage.fromBytes(bytes));
     }
   }
 
   @override
-  Future<void> sendDrawCardAction() => retryRequest(
+  Future<void> sendDrawCardAction(PlayerType player) => _retryRequest(
     () => _manager.notifyCharacteristic(
       _central,
       BleGattServices.gameStateCharacteristic,
-      value: Uint8List.fromList(List.empty()),
+      value: DrawCardMessage(player).toBytes(),
     ),
   );
 
   @override
-  Future<void> sendPlayCardAction(Card card) => retryRequest(
+  Future<void> sendPlayCardAction(Card card, PlayerType player) =>
+      _retryRequest(
+        () => _manager.notifyCharacteristic(
+          _central,
+          BleGattServices.gameStateCharacteristic,
+          value: CardPlayMessage(card, player).toBytes(),
+        ),
+      );
+
+  @override
+  Future<void> sendGameResign() => _retryRequest(
     () => _manager.notifyCharacteristic(
       _central,
       BleGattServices.gameStateCharacteristic,
-      value: CardPlayMessage(card).toBytes(),
+      value: Uint8List(0),
     ),
   );
 
-  Future<void> retryRequest(Future<void> Function() request) async {
+  Future<void> _retryRequest(Future<void> Function() request) async {
     Exception? error;
     for (int i = 0; i < 3; i++) {
       try {

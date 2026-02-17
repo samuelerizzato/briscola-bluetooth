@@ -1,25 +1,15 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:io';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
-import 'package:briscola/ble/ble_game_peripheral_service.dart';
 import 'package:briscola/ble/ble_gatt_services.dart';
 import 'package:briscola/ble/conversions.dart';
 import 'package:briscola/ble/device_connection.dart';
-import 'package:briscola/game/briscola_world_ble.dart';
-import 'package:briscola/game/components/playing_surface.dart';
-import 'package:briscola/game/game_result.dart';
-import 'package:briscola/ui/screens/game_screen.dart';
-import 'package:briscola/ui/screens/game_result_screen.dart';
 import 'package:briscola/snackbar.dart';
-import 'package:briscola/game/states/game_context.dart';
-import 'package:briscola/game/states/state_machine.dart';
+import 'package:briscola/ui/screens/host_game_screen.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
-
-import 'home_screen.dart';
 
 class PeripheralLobbyScreen extends StatefulWidget {
   const PeripheralLobbyScreen({super.key});
@@ -292,7 +282,7 @@ class _PeripheralLobbyScreenState extends State<PeripheralLobbyScreen> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: _buildGamePage,
+          builder: (context) => HostGameScreen(_central!),
           settings: RouteSettings(
             name: '/GameScreen',
             arguments: PeripheralConnection(_central!),
@@ -306,48 +296,5 @@ class _PeripheralLobbyScreenState extends State<PeripheralLobbyScreen> {
           .characteristicWriteRequested
           .listen(_handleWriteRequest);
     }
-  }
-
-  Widget _buildGamePage(BuildContext context) {
-    int seed = Random().nextInt(256);
-    PlayerType lead = Random().nextBool()
-        ? PlayerType.local
-        : PlayerType.remote;
-
-    final peripheralService = BleGamePeripheralService(_central!, seed, lead);
-
-    final stateMachine = StateMachine(
-      GameContext(lead, (GameResult result) {
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute<void>(
-              builder: (context) => GameResultScreen(result: result),
-            ),
-          );
-        }
-      }),
-    );
-
-    return GameScreen(
-      BriscolaWorldBle(seed, stateMachine, peripheralService, () async {
-        try {
-          await peripheralService.setupBleGame();
-        } catch (e) {
-          SnackbarManager.show('Cannot setup game');
-          if (context.mounted) {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-              (route) => false,
-            );
-          }
-        }
-      }),
-      () {
-        peripheralService.dispose();
-        stateMachine.dispose();
-      },
-    );
   }
 }

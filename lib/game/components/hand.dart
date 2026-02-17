@@ -26,16 +26,18 @@ class Hand extends PositionComponent {
     _cards.add(card);
   }
 
-  void removeCard(Card card) {
+  Card removeCard(Card card) {
     int cardIndex = _cards.indexWhere(
       (c) => c.rank.value == card.rank.value && c.suit.type == card.suit.type,
     );
-    _cards.removeAt(cardIndex);
+    final removedCard = _cards.removeAt(cardIndex);
     for (var i = cardIndex; i < _cards.length; i++) {
       _cards[i].position.sub(
         Vector2(BriscolaWorld.cardWidth + BriscolaWorld.cardGap, 0.0),
       );
     }
+
+    return removedCard;
   }
 
   bool canAcquireCard() => _cards.length < 3;

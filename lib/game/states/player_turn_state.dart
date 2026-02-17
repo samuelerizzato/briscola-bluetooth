@@ -4,13 +4,13 @@ import 'game_state.dart';
 
 class PlayerTurnState implements GameState {
   @override
-  void enter(StateMachine stateMachine) {
+  Future<void> enter(StateMachine stateMachine) async {
     stateMachine.context.playerHand.isEnabled = true;
     stateMachine.context.playerTricksPile.isActive = true;
   }
 
   @override
-  void exit(StateMachine stateMachine) {
+  Future<void> exit(StateMachine stateMachine) async {
     stateMachine.context.playerHand.isEnabled = false;
     stateMachine.context.playerTricksPile.isActive = false;
   }

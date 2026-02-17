@@ -1,5 +1,6 @@
 class GameResult {
-  final int points;
-  final int opponentPoints;
-  GameResult(this.points, this.opponentPoints); 
+  final bool resigned;
+  final int? points;
+  final int? opponentPoints;
+  const GameResult(this.resigned, [this.points, this.opponentPoints]);
 }
