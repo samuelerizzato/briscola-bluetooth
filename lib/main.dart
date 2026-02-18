@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:briscola/ble/device_connection.dart';
 import 'package:briscola/ui/screens/home_screen.dart';
 import 'package:briscola/snackbar.dart';
@@ -38,7 +36,9 @@ class BluetoothAdapterStateObserver extends NavigatorObserver {
   @override
   void didPop(Route route, Route? previousRoute) {
     super.didPop(route, previousRoute);
-    _connectionSubscription?.cancel();
-    _connectionSubscription = null;
+    if (route.settings.name == '/GameScreen') {
+      _connectionSubscription?.cancel();
+      _connectionSubscription = null;
+    }
   }
 }

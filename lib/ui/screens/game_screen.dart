@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:developer' as dev;
 
 import 'package:briscola/game/briscola_game.dart';
 import 'package:briscola/game/briscola_world.dart';
@@ -65,7 +64,6 @@ class _GameScreenState extends State<GameScreen> {
           SnackbarManager.show('Opponent can\'t play the card');
         }
       } else if (state is OpponentDrawState) {
-        dev.log('Entered opponent DRAW');
         if (!_server.applyDrawCard(_server.opponentHand)) {
           SnackbarManager.show('Opponent can\'t draw a card');
         }
