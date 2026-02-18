@@ -6,12 +6,19 @@ import 'game_state.dart';
 class GameOverState implements GameState {
   @override
   Future<void> enter(StateMachine stateMachine) async {
+    int playerPoints = stateMachine.context.playerTricksPile.countPoints();
+    int opponentPoints = stateMachine.context.opponentTricksPile.countPoints();
+
     stateMachine.context.onGameOver(
-        GameResult(
-          false,
-          stateMachine.context.playerTricksPile.countPoints(),
-          stateMachine.context.opponentTricksPile.countPoints(),
-        )
+      GameResult(
+        playerPoints > opponentPoints
+            ? GameOutcome.win
+            : playerPoints < opponentPoints
+            ? GameOutcome.loss
+            : GameOutcome.draw,
+        points: playerPoints,
+        opponentPoints: opponentPoints,
+      ),
     );
   }
 

@@ -53,7 +53,14 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
           final bool shouldPop =
               await Dialogs.showBackDialog(context, _stopGame) ?? false;
           if (context.mounted && shouldPop) {
-            Navigator.pop(context);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const GameResultScreen(
+                  result: GameResult(GameOutcome.resigned),
+                ),
+              ),
+            );
           }
         },
         child: Stack(
@@ -71,7 +78,7 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
     _stateMachine = StateMachine(
       GameContext(widget._leadPlayer, (GameResult result) {
         if (mounted) {
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute<void>(
               builder: (context) => GameResultScreen(result: result),
@@ -125,7 +132,13 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
   }
 
   void _handleRemoteResign() {
-    Navigator.pop(context);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) =>
+            GameResultScreen(result: GameResult(GameOutcome.opponentResigned)),
+      ),
+    );
   }
 
   Future<void> _stopGame() async {

@@ -37,7 +37,7 @@ class _GameScreenState extends State<GameScreen> {
 
     _stateMachine = StateMachine(
       GameContext(PlayerType.local, (GameResult result) {
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute<void>(
             builder: (context) => GameResultScreen(result: result),
@@ -87,7 +87,14 @@ class _GameScreenState extends State<GameScreen> {
           final bool shouldPop =
               await Dialogs.showBackDialog(context, _stopGame) ?? false;
           if (context.mounted && shouldPop) {
-            Navigator.pop(context);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const GameResultScreen(
+                  result: GameResult(GameOutcome.resigned),
+                ),
+              ),
+            );
           }
         },
         child: Stack(
