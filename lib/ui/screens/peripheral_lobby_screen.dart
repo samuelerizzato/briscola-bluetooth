@@ -27,7 +27,7 @@ class _PeripheralLobbyScreenState extends State<PeripheralLobbyScreen> {
   BluetoothLowEnergyState _bleState = BluetoothLowEnergyState.unknown;
   Central? _central;
   bool _isCentralReady = false;
-  final String hostName = 'HOST-1234';
+  final String _hostName = 'HOST-1234';
 
   @override
   void initState() {
@@ -127,6 +127,8 @@ class _PeripheralLobbyScreenState extends State<PeripheralLobbyScreen> {
             _central = args.central;
           });
           _stopAdvertising();
+        } else {
+          _manager.disconnect(args.central);
         }
     }
   }
@@ -180,7 +182,7 @@ class _PeripheralLobbyScreenState extends State<PeripheralLobbyScreen> {
         spacing: 10.0,
         children: [
           Text(
-            'You are $hostName',
+            'You are $_hostName',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           _central == null
@@ -209,7 +211,12 @@ class _PeripheralLobbyScreenState extends State<PeripheralLobbyScreen> {
                         ],
                       ),
                     ),
-                    Text('Identifier: ${_central!.uuid.toString()}'),
+                    Center(
+                      child: Text('Identifier'),
+                    ),
+                    Center(
+                      child: Text(_central!.uuid.toString()),
+                    ),
                   ],
                 ),
           ElevatedButton(
@@ -236,13 +243,16 @@ class _PeripheralLobbyScreenState extends State<PeripheralLobbyScreen> {
       return;
     }
 
+    if (_central != null) {
+      await _manager.disconnect(_central!);
+    }
     await _manager.removeAllServices();
     await _manager.addService(BleGattServices.gameStartService);
     await _manager.addService(BleGattServices.gameStateService);
 
     final advertisement = Advertisement(
       serviceUUIDs: [UUID.fromString("12345678-1234-5678-1234-56789abcdef0")],
-      name: Platform.isWindows ? null : hostName,
+      name: Platform.isWindows ? null : _hostName,
       manufacturerSpecificData: Platform.isIOS || Platform.isMacOS
           ? []
           : [
@@ -273,7 +283,7 @@ class _PeripheralLobbyScreenState extends State<PeripheralLobbyScreen> {
 
   void _startGame() async {
     if (!_isCentralReady) {
-      SnackbarManager.show("Cannot start game, player isn't responding");
+      SnackbarManager.show("Cannot start game, wait and try again");
       return;
     }
 
