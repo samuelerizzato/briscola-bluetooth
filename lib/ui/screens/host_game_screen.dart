@@ -1,5 +1,11 @@
 import 'dart:math';
 import 'dart:developer' as dev;
+import 'package:briscola/game/commands/draw_card_command.dart';
+import 'package:briscola/game/commands/play_card_command.dart';
+import 'package:flame/game.dart';
+import 'package:flutter/material.dart';
+import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
+
 import 'package:briscola/ble/messages/card_play_message.dart';
 import 'package:briscola/ble/messages/draw_card_message.dart';
 import 'package:briscola/game/game_result.dart';
@@ -12,7 +18,6 @@ import 'package:briscola/game/briscola_world.dart';
 import 'package:briscola/game/components/hand.dart';
 import 'package:briscola/game/components/playing_surface.dart';
 import 'package:briscola/game/states/state_machine.dart';
-import 'package:briscola/game/game_server.dart';
 import 'package:briscola/game/briscola_game.dart';
 import 'package:briscola/game/components/card.dart' as game;
 import 'package:briscola/snackbar.dart';
@@ -28,10 +33,13 @@ class HostGameScreen extends StatefulWidget {
 
 class _HostGameScreenState extends State<HostGameScreen> {
   late final BriscolaGame _game;
+  late final BriscolaWorld _world;
+  late final StateMachine _stateMachine;
+
+  late final PlayCardCommand _playCardCommand;
+  late final DrawCardCommand _drawCardCommand;
 
   late final BleGamePeripheralService _service;
-  late final GameServer _server;
-  late final StateMachine _stateMachine;
 
   @override
   Widget build(BuildContext context) {
@@ -55,39 +63,45 @@ class _HostGameScreenState extends State<HostGameScreen> {
         ? PlayerType.local
         : PlayerType.remote;
 
-    _stateMachine = StateMachine(
-      GameContext(leadPlayer, (GameResult result) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute<void>(
-              builder: (context) => GameResultScreen(result: result),
-            ),
-          );
-        }
-      }),
-    );
+    final gameContext = GameContext(leadPlayer, (GameResult result) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => GameResultScreen(result: result),
+          ),
+        );
+      }
+    });
 
-    final world = BriscolaWorld(
+    _stateMachine = StateMachine(gameContext);
+
+    _world = BriscolaWorld(
       seed,
       _stateMachine,
       _handleLocalPlayCard,
       _handleLocalDrawCard,
       _handleSetup,
     );
-    _server = GameServer(world, _stateMachine.context);
+
+    _playCardCommand = PlayCardCommand(
+      gameContext.playingSurface,
+      _world.applyPlayCard,
+    );
+
+    _drawCardCommand = DrawCardCommand(gameContext.deck, _world.applyDrawCard);
+
     _service = BleGamePeripheralService(widget._central, seed, leadPlayer);
     _service.registerOpponentEventHandlers(
       _handleRemoteDraw,
       _handleRemotePlayCard,
       _handleRemoteResign,
     );
-    _game = BriscolaGame(world);
+    _game = BriscolaGame(_world);
   }
 
   void _handleLocalPlayCard(Hand hand, game.Card card) async {
-    if (!_server.applyPlayCard(hand, card)) return;
-
+    _playCardCommand.execute(hand, card);
     try {
       await _service.sendPlayCardAction(card, hand.type);
     } catch (e) {
@@ -96,9 +110,7 @@ class _HostGameScreenState extends State<HostGameScreen> {
   }
 
   void _handleLocalDrawCard(Hand hand) async {
-    if (!_server.applyDrawCard(hand)) {
-      return;
-    }
+    _drawCardCommand.execute(hand);
     try {
       await _service.sendDrawCardAction(hand.type);
     } catch (e) {
@@ -118,9 +130,7 @@ class _HostGameScreenState extends State<HostGameScreen> {
   }
 
   void _handleRemoteDraw(DrawCardMessage message) async {
-    if (!_server.applyDrawCard(_server.opponentHand)) {
-      return;
-    }
+    _drawCardCommand.execute(_stateMachine.context.opponentHand);
     try {
       await _service.sendDrawCardAction(PlayerType.remote);
     } catch (e) {
@@ -129,9 +139,7 @@ class _HostGameScreenState extends State<HostGameScreen> {
   }
 
   Future<void> _handleRemotePlayCard(CardPlayMessage message) async {
-    if (!_server.applyPlayCard(_server.opponentHand, message.card)) {
-      return;
-    }
+    _playCardCommand.execute(_stateMachine.context.opponentHand, message.card);
     try {
       await _service.sendPlayCardAction(message.card, PlayerType.remote);
     } catch (e) {

@@ -1,15 +1,16 @@
 import 'dart:developer';
+import 'package:flutter/material.dart';
+import 'package:flame/game.dart';
 
 import 'package:briscola/ble/ble_game_central_service.dart';
 import 'package:briscola/ble/messages/card_play_message.dart';
 import 'package:briscola/ble/messages/draw_card_message.dart';
-import 'package:briscola/game/game_result.dart';
-import 'package:briscola/game/states/game_context.dart';
-import 'package:briscola/game/game_client.dart';
 import 'package:briscola/ui/screens/game_result_screen.dart';
 import 'package:briscola/ui/widgets/game_pop_scope.dart';
 
 import 'package:briscola/game/briscola_world.dart';
+import 'package:briscola/game/game_result.dart';
+import 'package:briscola/game/states/game_context.dart';
 import 'package:briscola/game/components/hand.dart';
 import 'package:briscola/game/components/playing_surface.dart';
 import 'package:briscola/game/states/state_machine.dart';
@@ -36,7 +37,7 @@ class ClientGameScreen extends StatefulWidget {
 class _ClientGameScreenState extends State<ClientGameScreen> {
   late final BriscolaGame _game;
 
-  late final GameClient _client;
+  late final BriscolaWorld _world;
   late final StateMachine _stateMachine;
 
   @override
@@ -70,19 +71,18 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
       }),
     );
 
-    final world = BriscolaWorld(
+    _world = BriscolaWorld(
       widget._seed,
       _stateMachine,
       _handleLocalPlayCard,
       _handleLocalDrawCard,
     );
-    _client = GameClient(_stateMachine.context, world);
     widget._service.registerOpponentEventHandlers(
       _handleRemoteDraw,
       _handleRemotePlayCard,
       _handleRemoteResign,
     );
-    _game = BriscolaGame(world);
+    _game = BriscolaGame(_world);
   }
 
   void _handleLocalPlayCard(Hand hand, game.Card card) async {
@@ -103,14 +103,18 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
 
   void _handleRemoteDraw(DrawCardMessage message) {
     log('Received move in the CLIENT');
-    Hand hand = _client.getHandByType(message.playerType);
-    _client.applyDrawCard(hand);
+    Hand hand = message.playerType == PlayerType.local
+        ? _stateMachine.context.playerHand
+        : _stateMachine.context.opponentHand;
+    _world.applyDrawCard(hand);
   }
 
   Future<void> _handleRemotePlayCard(CardPlayMessage message) {
     log('Received message play card');
-    Hand hand = _client.getHandByType(message.playerType);
-    return _client.applyPlayCard(hand, message.card);
+    Hand hand = message.playerType == PlayerType.local
+        ? _stateMachine.context.playerHand
+        : _stateMachine.context.opponentHand;
+    return _world.applyPlayCard(hand, message.card);
   }
 
   void _handleRemoteResign() {
