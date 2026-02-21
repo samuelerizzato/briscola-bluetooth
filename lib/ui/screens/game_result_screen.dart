@@ -21,13 +21,19 @@ class GameResultScreen extends StatelessWidget {
               getOutcomeMessage(result.outcome),
               style: TextStyle(fontSize: 50.0),
             ),
-            Text(getMessage(result.outcome)),
+            Text(
+              getMessage(result.outcome),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             if (!resign) buildScoreTable(context),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Go back to waiting room'.toUpperCase()),
+              child: Text('Continue'.toUpperCase()),
             ),
           ],
         ),
