@@ -12,7 +12,7 @@ import 'package:briscola/game/states/state_machine.dart';
 import 'package:briscola/game/game_server.dart';
 import 'package:briscola/snackbar.dart';
 import 'package:briscola/ui/screens/game_result_screen.dart';
-import 'package:briscola/ui/widgets/dialogs.dart';
+import 'package:briscola/ui/widgets/game_pop_scope.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
@@ -76,25 +76,14 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Game')),
-      body: PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (bool didPop, Object? result) async {
-          if (didPop) return;
-
-          final bool shouldPop =
-              await Dialogs.showBackDialog(context, _stopGame) ?? false;
-          if (context.mounted && shouldPop) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const GameResultScreen(
-                  result: GameResult(GameOutcome.resigned),
-                ),
-              ),
-            );
-          }
-        },
+      appBar: AppBar(
+        title: const Text('Game'),
+        backgroundColor: _game.backgroundColor(),
+        foregroundColor: Colors.white,
+        elevation: 0.0,
+      ),
+      body: GamePopScope(
+        () async => true,
         child: Stack(
           fit: StackFit.expand,
           children: [GameWidget(game: _game)],

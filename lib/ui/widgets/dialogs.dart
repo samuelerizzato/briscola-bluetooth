@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class Dialogs {
   static Future<bool?> showBackDialog(
     BuildContext context,
-    void Function() onConfirm,
+    Future<bool> Function() onConfirm,
   ) => showDialog(
     context: context,
     builder: (BuildContext context) => AlertDialog(
@@ -15,7 +15,7 @@ class Dialogs {
             textStyle: Theme.of(context).textTheme.labelLarge,
           ),
           onPressed: () {
-            Navigator.pop(context, false);
+            Navigator.of(context).pop(false);
           },
           child: const Text('Nevermind'),
         ),
@@ -23,7 +23,12 @@ class Dialogs {
           style: TextButton.styleFrom(
             textStyle: Theme.of(context).textTheme.labelLarge,
           ),
-          onPressed: onConfirm,
+          onPressed: () async {
+            bool shouldNavigate = await onConfirm();
+            if (context.mounted) {
+              Navigator.of(context).pop(shouldNavigate);
+            }
+          },
           child: const Text('Leave'),
         ),
       ],

@@ -7,9 +7,7 @@ import 'package:briscola/game/game_result.dart';
 import 'package:briscola/game/states/game_context.dart';
 import 'package:briscola/game/game_client.dart';
 import 'package:briscola/ui/screens/game_result_screen.dart';
-import 'package:briscola/ui/widgets/dialogs.dart';
-import 'package:flutter/material.dart';
-import 'package:flame/game.dart';
+import 'package:briscola/ui/widgets/game_pop_scope.dart';
 
 import 'package:briscola/game/briscola_world.dart';
 import 'package:briscola/game/components/hand.dart';
@@ -45,24 +43,8 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Game')),
-      body: PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (bool didPop, Object? result) async {
-          if (didPop) return;
-
-          final bool shouldPop =
-              await Dialogs.showBackDialog(context, _stopGame) ?? false;
-          if (context.mounted && shouldPop) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const GameResultScreen(
-                  result: GameResult(GameOutcome.resigned),
-                ),
-              ),
-            );
-          }
-        },
+      body: GamePopScope(
+        _stopGame,
         child: Stack(
           fit: StackFit.expand,
           children: [GameWidget(game: _game)],
@@ -141,14 +123,13 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
     );
   }
 
-  Future<void> _stopGame() async {
+  Future<bool> _stopGame() async {
     try {
       await widget._service.sendGameResign();
-      if (mounted) {
-        Navigator.pop(context, true);
-      }
+      return true;
     } catch (e) {
       SnackbarManager.show('Error, unable to leave the game');
+      return false;
     }
   }
 
