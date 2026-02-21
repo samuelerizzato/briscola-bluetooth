@@ -12,13 +12,14 @@ class TricksPile extends PositionComponent with TapCallbacks {
   final List<Card> _cards = [];
   late final TextComponent scoreText;
   bool isActive = false;
+  final Paint _activeBackgroundPaint;
 
   TricksPile(Color activeColor)
     : _activeBackgroundPaint = Paint()
         ..color = activeColor.withAlpha(0x88)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 10
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 7.0);
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 3.0);
 
   static final RRect pileRRect = RRect.fromRectAndRadius(
     BriscolaWorld.cardSize.toRect(),
@@ -34,8 +35,6 @@ class TricksPile extends PositionComponent with TapCallbacks {
     ..color = const Color(0x88ffffff)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 10;
-
-  final Paint _activeBackgroundPaint;
 
   void acquireCard(Card card) {
     card.position = position;
