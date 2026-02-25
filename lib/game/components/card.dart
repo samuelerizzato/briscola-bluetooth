@@ -30,10 +30,10 @@ class Card extends PositionComponent with TapCallbacks {
 
   static final Sprite jackSprite = briscolaSprite(
     'jack.png',
-    13.0,
-    32.0,
-    72.0,
-    34.0,
+    30.0,
+    23.0,
+    39.0,
+    54.0,
   );
   static final Sprite knightSprite = briscolaSprite(
     'knight.png',
