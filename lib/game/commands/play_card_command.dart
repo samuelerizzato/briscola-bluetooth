@@ -9,7 +9,8 @@ class PlayCardCommand {
   PlayCardCommand(this._surface, this._action);
 
   void execute(Hand hand, Card card) {
-      if (hand.isEnabled && _surface.canAcquireCard(hand.type)) return;
-      _action(hand, card);
+      if (hand.isEnabled && _surface.canAcquireCard(hand.type)) {
+        _action(hand, card);
+      }
   }
 }

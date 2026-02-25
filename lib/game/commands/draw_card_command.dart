@@ -8,7 +8,8 @@ class DrawCardCommand {
   DrawCardCommand(this._deck, this._action);
 
   void execute(Hand hand) {
-    if (!_deck.isEmpty) return;
-    _action(hand);
+    if (!_deck.isEmpty) {
+      _action(hand);
+    }
   }
 }

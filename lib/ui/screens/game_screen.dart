@@ -51,8 +51,12 @@ class _GameScreenState extends State<GameScreen> {
     _world = BriscolaWorld(
       Random().nextInt(256),
       _stateMachine,
-      _playCardCommand.execute,
-      _drawCardCommand.execute,
+      (hand, card) {
+        _playCardCommand.execute(hand, card);
+      },
+      (hand) {
+        _drawCardCommand.execute(hand);
+      },
     );
 
     _playCardCommand = PlayCardCommand(
@@ -79,7 +83,7 @@ class _GameScreenState extends State<GameScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Game'),
-        backgroundColor: _game.backgroundColor(),
+        backgroundColor: Colors.black.withAlpha(0x33),
         foregroundColor: Colors.white,
         elevation: 0.0,
       ),
