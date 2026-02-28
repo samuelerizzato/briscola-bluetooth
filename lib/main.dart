@@ -57,6 +57,15 @@ class BluetoothAdapterStateObserver extends NavigatorObserver {
   }
 
   @override
+  void didReplace({Route? newRoute, Route? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    if (oldRoute?.settings.name == '/GameScreen') {
+      _connectionSubscription?.cancel();
+      _connectionSubscription = null;
+    }
+  }
+
+  @override
   void didPop(Route route, Route? previousRoute) {
     super.didPop(route, previousRoute);
     if (route.settings.name == '/GameScreen') {
