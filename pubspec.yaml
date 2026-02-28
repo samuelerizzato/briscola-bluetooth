@@ -28,6 +28,7 @@ flutter:
     - assets/images/jack.png
     - assets/images/knight.png
     - assets/images/king.png
+    - assets/rules.json
 
   fonts:
     - family: LilitaOne

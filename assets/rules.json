@@ -1,0 +1,23 @@
+{
+  "goal": "A player must accumulate more points than the other player, which means at least 61 points.",
+  "total": "There are in total 40 cards and 120 points available distributed across the cards.",
+  "card": "Each card has a suit type and a rank. The rank determines how many points the card has.",
+  "ranks": {
+    "ace": "11 points",
+    "three": "10 points",
+    "king": "4 points",
+    "knight": "3 points",
+    "jack": "2 points",
+    "seven": "0 points",
+    "six": "0 points",
+    "five": "0 points",
+    "four": "0 points",
+    "two": "0 points"
+  },
+  "start": "1. The game starts by selecting one special card called \"Briscola\" which determines what is the dominant suit and each player gets 3 cards.\nThe briscola is then placed under the deck and it is visible for the rest of the game.",
+  "turnSystem": "2. The first player plays one card then the other player plays one card (it's not mandatory to follow suit).",
+  "turnEnd": "3. The winner of the trick is the highest rank card of the suit played by the first player or the highest rank \"briscola\" card.",
+  "tricks": "4. The winner takes the card in the tricks pile and then each player draws one card from the deck.",
+  "decide": "5. The winner of the trick plays first in the next round.",
+  "end": "The game ends when there are no more cards left to play."
+}

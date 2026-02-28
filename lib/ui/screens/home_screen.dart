@@ -1,6 +1,7 @@
 import 'package:briscola/ui/screens/game_screen.dart';
 import 'package:briscola/ui/screens/peripheral_lobby_screen.dart';
 import 'package:briscola/ui/screens/central_lobby_screen.dart';
+import 'package:briscola/ui/screens/rules_screen.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -57,6 +58,15 @@ class HomeScreen extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (context) => const PeripheralLobbyScreen(),
                       settings: RouteSettings(name: '/PeripheralLobby'),
+                    ),
+                  );
+                }),
+                buildButton('rules', () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RulesScreen(),
+                      settings: RouteSettings(name: '/RulesScreen'),
                     ),
                   );
                 }),
