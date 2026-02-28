@@ -225,7 +225,19 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Widget buildList() {
     if (_results.isEmpty) {
-      return const Center(child: Text('No devices found.'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 5.0,
+          children: [
+            const Icon(Icons.no_cell, size: 100.0),
+            Text(
+              'No devices found.',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ],
+        ),
+      );
     }
 
     return ListView(
