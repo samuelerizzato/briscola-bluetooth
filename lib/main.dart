@@ -9,7 +9,30 @@ void main() {
   runApp(
     MaterialApp(
       title: 'Briscola',
-      theme: ThemeData(fontFamily: 'LilitaOne'),
+      theme: ThemeData(
+        fontFamily: 'LilitaOne',
+        appBarTheme: AppBarThemeData(
+          backgroundColor: Colors.black.withAlpha(0x33),
+        ),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.white,
+          brightness: Brightness.dark,
+        ).copyWith(surface: const Color(0xFF13663F), onSurface: Colors.white),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(foregroundColor: Colors.white),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(foregroundColor: Colors.white),
+        ),
+        listTileTheme: ListTileThemeData(
+          iconColor: Colors.white,
+          tileColor: Colors.black.withAlpha(0x33),
+          subtitleTextStyle: TextStyle(
+            color: const Color(0xFFFDEBD6),
+            fontFamily: 'LilitaOne',
+          ),
+        ),
+      ),
       home: const HomeScreen(),
       navigatorObservers: [BluetoothAdapterStateObserver()],
       scaffoldMessengerKey: SnackbarManager.scaffoldKey,

@@ -24,6 +24,7 @@ class GameResultScreen extends StatelessWidget {
             Text(
               getMessage(result.outcome),
               style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
             ),
             if (!resign) buildScoreTable(context),
             ElevatedButton(

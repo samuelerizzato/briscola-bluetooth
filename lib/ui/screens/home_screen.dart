@@ -70,6 +70,7 @@ class HomeScreen extends StatelessWidget {
 
   Widget buildButton(String text, VoidCallback onPressed) => ElevatedButton(
     style: ElevatedButton.styleFrom(
+      minimumSize: const Size(150, 40),
       padding: EdgeInsets.symmetric(horizontal: 32, vertical: 20),
     ),
     onPressed: onPressed,
