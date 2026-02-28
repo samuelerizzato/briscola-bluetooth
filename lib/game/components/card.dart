@@ -21,12 +21,12 @@ class Card extends PositionComponent with TapCallbacks {
   static final RRect backRRectInner = cardRRect.deflate(5);
 
   static final Paint frontBackgroundPaint = Paint()
-    ..color = const Color(0xffffffff);
+    ..color = const Color(0xFFF8F5E6);
 
   static final Paint backBackgroundPaint = Paint()
-    ..color = const Color(0xffffffff);
+    ..color = const Color(0xFFFFFFFF);
   static final Paint backInnerBackgroundPaint = Paint()
-    ..color = const Color(0xff990030);
+    ..color = const Color(0xFF990030);
 
   static final Sprite jackSprite = briscolaSprite(
     'jack.png',

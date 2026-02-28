@@ -17,7 +17,7 @@ class BriscolaGame extends FlameGame {
   }
 
   @override
-  Color backgroundColor() => const Color(0xFF006400);
+  Color backgroundColor() => const Color(0xFF13663F);
 }
 
 Sprite briscolaSprite(
