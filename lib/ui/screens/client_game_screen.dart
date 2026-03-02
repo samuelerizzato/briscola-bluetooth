@@ -58,25 +58,23 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
   void initState() {
     super.initState();
 
-    _stateMachine = StateMachine(
-      GameContext(widget._leadPlayer, (GameResult result) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute<void>(
-              builder: (context) => GameResultScreen(result: result),
-            ),
-          );
-        }
-      }),
-    );
+    final gameContext = GameContext(widget._leadPlayer, (GameResult result) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => GameResultScreen(result: result),
+          ),
+        );
+      }
+    });
 
-    _world = BriscolaWorld(
-      widget._seed,
-      _stateMachine,
-      _handleLocalPlayCard,
-      _handleLocalDrawCard,
-    );
+    _stateMachine = StateMachine(gameContext);
+    _world = BriscolaWorld(widget._seed, _stateMachine);
+
+    gameContext.playerHand.onPlayCard = _handleLocalPlayCard;
+    gameContext.deck.onDrawCard = _handleLocalDrawCard;
+
     widget._service.registerOpponentEventHandlers(
       _handleRemoteDraw,
       _handleRemotePlayCard,
@@ -85,17 +83,22 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
     _game = BriscolaGame(_world);
   }
 
-  void _handleLocalPlayCard(Hand hand, game.Card card) async {
+  void _handleLocalPlayCard(game.Card card) async {
     try {
-      await widget._service.sendPlayCardAction(card, hand.type);
+      await widget._service.sendPlayCardAction(
+        card,
+        _stateMachine.context.playerHand.type,
+      );
     } catch (e) {
       SnackbarManager.show("Error while sending update");
     }
   }
 
-  void _handleLocalDrawCard(Hand hand) async {
+  void _handleLocalDrawCard() async {
     try {
-      await widget._service.sendDrawCardAction(hand.type);
+      await widget._service.sendDrawCardAction(
+        _stateMachine.context.playerHand.type,
+      );
     } catch (e) {
       SnackbarManager.show("Error while sending update");
     }

@@ -33,7 +33,6 @@ class HostGameScreen extends StatefulWidget {
 
 class _HostGameScreenState extends State<HostGameScreen> {
   late final BriscolaGame _game;
-  late final BriscolaWorld _world;
   late final StateMachine _stateMachine;
 
   late final PlayCardCommand _playCardCommand;
@@ -75,21 +74,17 @@ class _HostGameScreenState extends State<HostGameScreen> {
     });
 
     _stateMachine = StateMachine(gameContext);
-
-    _world = BriscolaWorld(
-      seed,
-      _stateMachine,
-      _handleLocalPlayCard,
-      _handleLocalDrawCard,
-      _handleSetup,
-    );
+    final world = BriscolaWorld(seed, _stateMachine, _handleSetup);
 
     _playCardCommand = PlayCardCommand(
       gameContext.playingSurface,
-      _world.applyPlayCard,
+      world.applyPlayCard,
     );
 
-    _drawCardCommand = DrawCardCommand(gameContext.deck, _world.applyDrawCard);
+    _drawCardCommand = DrawCardCommand(gameContext.deck, world.applyDrawCard);
+
+    gameContext.deck.onDrawCard = _handleLocalDrawCard;
+    gameContext.playerHand.onPlayCard = _handleLocalPlayCard;
 
     _service = BleGamePeripheralService(widget._central, seed, leadPlayer);
     _service.registerOpponentEventHandlers(
@@ -97,10 +92,11 @@ class _HostGameScreenState extends State<HostGameScreen> {
       _handleRemotePlayCard,
       _handleRemoteResign,
     );
-    _game = BriscolaGame(_world);
+    _game = BriscolaGame(world);
   }
 
-  void _handleLocalPlayCard(Hand hand, game.Card card) async {
+  void _handleLocalPlayCard(game.Card card) async {
+    Hand hand = _stateMachine.context.playerHand;
     _playCardCommand.execute(hand, card);
     try {
       await _service.sendPlayCardAction(card, hand.type);
@@ -109,10 +105,10 @@ class _HostGameScreenState extends State<HostGameScreen> {
     }
   }
 
-  void _handleLocalDrawCard(Hand hand) async {
-    _drawCardCommand.execute(hand);
+  void _handleLocalDrawCard() async {
+    _drawCardCommand.execute(_stateMachine.context.playerHand);
     try {
-      await _service.sendDrawCardAction(hand.type);
+      await _service.sendDrawCardAction(_stateMachine.context.playerHand.type);
     } catch (e) {
       SnackbarManager.show("Error while sending update");
     }

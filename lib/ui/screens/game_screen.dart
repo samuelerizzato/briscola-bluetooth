@@ -25,7 +25,6 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late final BriscolaGame _game;
-  late final BriscolaWorld _world;
   late final StateMachine _stateMachine;
 
   late final PlayCardCommand _playCardCommand;
@@ -47,24 +46,22 @@ class _GameScreenState extends State<GameScreen> {
     });
 
     _stateMachine = StateMachine(gameContext);
-
-    _world = BriscolaWorld(
-      Random().nextInt(256),
-      _stateMachine,
-      (hand, card) {
-        _playCardCommand.execute(hand, card);
-      },
-      (hand) {
-        _drawCardCommand.execute(hand);
-      },
-    );
+    final world = BriscolaWorld(Random().nextInt(256), _stateMachine);
 
     _playCardCommand = PlayCardCommand(
       gameContext.playingSurface,
-      _world.applyPlayCard,
+      world.applyPlayCard,
     );
 
-    _drawCardCommand = DrawCardCommand(gameContext.deck, _world.applyDrawCard);
+    _drawCardCommand = DrawCardCommand(gameContext.deck, world.applyDrawCard);
+
+    gameContext.deck.onDrawCard = () {
+      _drawCardCommand.execute(gameContext.playerHand);
+    };
+
+    gameContext.playerHand.onPlayCard = (card) {
+      _playCardCommand.execute(gameContext.playerHand, card);
+    };
 
     _gameStateChangedSubscription = _stateMachine.stateChanged.listen((state) {
       if (state is OpponentTurnState) {
@@ -75,18 +72,13 @@ class _GameScreenState extends State<GameScreen> {
       }
     });
 
-    _game = BriscolaGame(_world);
+    _game = BriscolaGame(world);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Game'),
-        backgroundColor: Colors.black.withAlpha(0x33),
-        foregroundColor: Colors.white,
-        elevation: 0.0,
-      ),
+      appBar: AppBar(title: const Text('Game')),
       body: GamePopScope(
         () async => true,
         child: Stack(

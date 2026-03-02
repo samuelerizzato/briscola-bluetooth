@@ -35,8 +35,6 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
   final int _initialSeed;
   late final StateMachine _stateMachine;
   final void Function()? _onSetup;
-  final void Function(Hand hand, Card card) _onLocalPlayCard;
-  final void Function(Hand hand) _onLocalDrawCard;
 
   GameContext get _gameContext => _stateMachine.context;
 
@@ -55,9 +53,7 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
 
   BriscolaWorld(
     this._initialSeed,
-    this._stateMachine,
-    this._onLocalPlayCard,
-    this._onLocalDrawCard, [
+    this._stateMachine, [
     this._onSetup,
   ]);
 
@@ -75,7 +71,6 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
     ]);
 
     _deck
-      ..onDrawCard = handlePlayerDraw
       ..priority = 41
       ..size = cardSize
       ..position = Vector2(0.0, boardHeight - cardHeight * 2.0 - cardGap);
@@ -205,13 +200,5 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
           : _stateMachine.playerTurnState;
     }
     _stateMachine.transitionTo(nextState);
-  }
-
-  Future<void> onLocalPlayCard(Card card) async {
-    _onLocalPlayCard(_playerHand, card);
-  }
-
-  Future<void> handlePlayerDraw() async {
-    _onLocalDrawCard(_playerHand);
   }
 }

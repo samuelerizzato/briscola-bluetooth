@@ -1,11 +1,11 @@
 import 'dart:developer';
 
-import 'package:briscola/game/briscola_world.dart';
 import 'package:briscola/game/components/card.dart';
 import 'package:briscola/game/components/hand.dart';
-import 'package:flame/components.dart';
 
-class PlayerHand extends Hand with HasWorldReference<BriscolaWorld> {
+class PlayerHand extends Hand {
+  void Function(Card)? onPlayCard;
+
   PlayerHand(super.type);
 
   @override
@@ -25,6 +25,6 @@ class PlayerHand extends Hand with HasWorldReference<BriscolaWorld> {
   void _playCard(Card card) {
     if (!isEnabled) return;
     log('playing card and enabled = ${isEnabled.toString()}');
-    world.onLocalPlayCard(card);
+    onPlayCard?.call(card);
   }
 }
