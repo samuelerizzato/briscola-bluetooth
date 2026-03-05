@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:briscola/game/states/decide_state.dart';
+import 'package:briscola/game/states/draw_end_state.dart';
 import 'package:briscola/game/states/game_context.dart';
 import 'package:briscola/game/states/game_over_state.dart';
 import 'package:briscola/game/states/game_state.dart';
@@ -17,6 +18,7 @@ class StateMachine {
 
   final PlayerDrawState playerDrawState;
   final OpponentDrawState opponentDrawState;
+  final DrawEndState drawEndState;
   final PlayerTurnState playerTurnState;
   final OpponentTurnState opponentTurnState;
   final TurnEndState turnEndState;
@@ -35,6 +37,7 @@ class StateMachine {
   StateMachine(this._context)
     : playerDrawState = PlayerDrawState(),
       opponentDrawState = OpponentDrawState(),
+      drawEndState = DrawEndState(),
       playerTurnState = PlayerTurnState(),
       opponentTurnState = OpponentTurnState(),
       turnEndState = TurnEndState(),

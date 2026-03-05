@@ -1,4 +1,6 @@
 import 'dart:developer';
+import 'package:briscola/game/commands/command_invoker.dart';
+import 'package:briscola/game/commands/move_command.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
 
@@ -105,11 +107,17 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
   }
 
   void _handleRemoteDraw(DrawCardMessage message) {
-    log('Received move in the CLIENT');
     Hand hand = message.playerType == PlayerType.local
         ? _stateMachine.context.playerHand
         : _stateMachine.context.opponentHand;
-    _world.applyDrawCard(hand);
+    CommandInvoker.execute(
+      MoveCommand(
+        _stateMachine.context.deck,
+        hand,
+        _stateMachine.context.deck.topCard,
+      ),
+    );
+    _stateMachine.transitionTo(_stateMachine.drawEndState);
   }
 
   Future<void> _handleRemotePlayCard(CardPlayMessage message) {
@@ -117,7 +125,10 @@ class _ClientGameScreenState extends State<ClientGameScreen> {
     Hand hand = message.playerType == PlayerType.local
         ? _stateMachine.context.playerHand
         : _stateMachine.context.opponentHand;
-    return _world.applyPlayCard(hand, message.card);
+    CommandInvoker.execute(
+      MoveCommand(hand, _stateMachine.context.playingSurface, message.card)
+    );
+    return _stateMachine.transitionTo(_stateMachine.turnEndState);
   }
 
   void _handleRemoteResign() {

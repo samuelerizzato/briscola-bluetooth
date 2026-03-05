@@ -1,20 +1,21 @@
-import 'dart:async';
 import 'dart:ui';
 
 import 'package:briscola/game/briscola_world.dart';
+import 'package:briscola/game/card_holder.dart';
 import 'package:briscola/game/components/card.dart';
-import 'package:briscola/game/components/tricks_pile.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flutter/animation.dart';
 
 enum PlayerType { local, remote }
 
-class PlayingSurface extends PositionComponent {
+class PlayingSurface extends PositionComponent implements CardHolder {
   final Map<PlayerType, Card?> _slots = {
     PlayerType.local: null,
     PlayerType.remote: null,
   };
+
+  PlayerType _activeSlot = PlayerType.local;
 
   static final Paint backgroundPaint = Paint()..color = const Color(0xffffd700);
   static final Paint innerBackgroundPaint = Paint()
@@ -27,11 +28,12 @@ class PlayingSurface extends PositionComponent {
 
   static final RRect innerSurfaceRRect = surfaceRRect.deflate(3);
 
-  void acquireCard(Card card, PlayerType type) {
+  @override
+  void acquireCard(Card card) {
     Vector2 cardPosition =
         position +
         Vector2(BriscolaWorld.surfacePadding, BriscolaWorld.surfacePadding);
-    if (type == PlayerType.remote) {
+    if (_activeSlot == PlayerType.remote) {
       assert(card.isFaceUp == false);
       cardPosition += Vector2(
         BriscolaWorld.cardWidth + BriscolaWorld.cardGap,
@@ -40,10 +42,14 @@ class PlayingSurface extends PositionComponent {
       card.flip();
     }
     card.position = cardPosition;
-    _slots[type] = card;
+    _slots[_activeSlot] = card;
   }
 
-  Future<void> moveCardsTo(TricksPile pile) async {
+  void setActiveSlot(PlayerType type) {
+    _activeSlot = type;
+  }
+
+  /*Future<void> moveCardsTo(TricksPile pile) async {
     assert(
       _slots[PlayerType.local] != null && _slots[PlayerType.remote] != null,
     );
@@ -70,7 +76,7 @@ class PlayingSurface extends PositionComponent {
     });
 
     return completer.future;
-  }
+  }*/
 
   void addMoveEffectToCard(Card card, Vector2 to, VoidCallback onComplete) {
     final dt = (to - card.position).length / (10.0 * card.width);
@@ -97,5 +103,18 @@ class PlayingSurface extends PositionComponent {
   void render(Canvas canvas) {
     canvas.drawRRect(surfaceRRect, backgroundPaint);
     canvas.drawRRect(innerSurfaceRRect, innerBackgroundPaint);
+  }
+
+  @override
+  Card removeCard(Card card) {
+    for (final slot in _slots.entries) {
+      if (slot.value?.rank.value == card.rank.value &&
+          slot.value?.suit.type == card.suit.type) {
+        Card removedCard = _slots[slot.key]!;
+        _slots[slot.key] = null;
+        return removedCard;
+      }
+    }
+    throw StateError('Could not find card ${card.rank} ${card.suit.type}');
   }
 }

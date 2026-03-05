@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:briscola/game/components/card.dart';
 import 'package:briscola/game/components/playing_surface.dart';
 import 'package:briscola/game/components/tricks_pile.dart';
+import 'package:briscola/game/commands/move_command.dart';
 import 'package:briscola/game/states/game_state.dart';
 import 'package:briscola/game/states/state_machine.dart';
 import 'package:briscola/game/suit.dart';
@@ -38,7 +40,23 @@ class TurnEndState implements GameState {
         ? ctx.playerTricksPile
         : ctx.opponentTricksPile;
 
-    await surface.moveCardsTo(winnerPile);
+    final completer = Completer();
+
+    surface.addMoveEffectToCard(surface.playerCard!, winnerPile.position, () {
+      MoveCommand(surface, winnerPile, surface.playerCard!).execute();
+      if (surface.opponentCard == null) {
+        completer.complete();
+      }
+    });
+
+    surface.addMoveEffectToCard(surface.opponentCard!, winnerPile.position, () {
+      MoveCommand(surface, winnerPile, surface.opponentCard!).execute();
+      if (surface.playerCard == null) {
+        completer.complete();
+      }
+    });
+
+    await completer.future;
     return stateMachine.transitionTo(stateMachine.decideState);
   }
 

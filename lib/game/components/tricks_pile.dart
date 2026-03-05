@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart' as material;
-
-import 'package:briscola/game/briscola_world.dart';
-import 'package:briscola/game/components/card.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 
-class TricksPile extends PositionComponent with TapCallbacks {
+import 'package:briscola/game/briscola_world.dart';
+import 'package:briscola/game/card_holder.dart';
+import 'package:briscola/game/components/card.dart';
+
+class TricksPile extends PositionComponent
+    with TapCallbacks
+    implements CardHolder {
   final List<Card> _cards = [];
   late final TextComponent scoreText;
   bool isActive = false;
@@ -36,6 +39,7 @@ class TricksPile extends PositionComponent with TapCallbacks {
     ..style = PaintingStyle.stroke
     ..strokeWidth = 10;
 
+  @override
   void acquireCard(Card card) {
     card.position = position;
     card.priority = _cards.length + 1;
@@ -62,7 +66,7 @@ class TricksPile extends PositionComponent with TapCallbacks {
         style: material.TextStyle(
           fontSize: 30.0,
           fontFamily: 'LilitaOne',
-          color: material.Colors.white
+          color: material.Colors.white,
         ),
       ),
       position: pileCenter,
@@ -86,5 +90,10 @@ class TricksPile extends PositionComponent with TapCallbacks {
     if (isActive) {
       canvas.drawRRect(activePileRRect, _activeBackgroundPaint);
     }
+  }
+
+  @override
+  Card removeCard(Card card) {
+    throw StateError('Cannot remove card from tricks pile');
   }
 }

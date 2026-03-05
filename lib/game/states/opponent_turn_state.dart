@@ -1,3 +1,4 @@
+import 'package:briscola/game/states/game_context.dart';
 import 'package:briscola/game/states/game_state.dart';
 import 'package:briscola/game/states/state_machine.dart';
 
@@ -5,8 +6,10 @@ import 'package:briscola/game/states/state_machine.dart';
 class OpponentTurnState implements GameState {
   @override
   Future<void> enter(StateMachine stateMachine) async {
-    stateMachine.context.opponentHand.isEnabled = true;
-    stateMachine.context.opponentTricksPile.isActive = true;
+    GameContext context = stateMachine.context;
+    context.opponentHand.isEnabled = true;
+    context.opponentTricksPile.isActive = true;
+    context.playingSurface.setActiveSlot(context.opponentHand.type);
   }
 
   @override

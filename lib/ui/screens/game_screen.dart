@@ -3,8 +3,11 @@ import 'dart:math';
 
 import 'package:briscola/game/briscola_game.dart';
 import 'package:briscola/game/briscola_world.dart';
-import 'package:briscola/game/commands/draw_card_command.dart';
-import 'package:briscola/game/commands/play_card_command.dart';
+import 'package:briscola/game/commands/command_invoker.dart';
+import 'package:briscola/game/commands/move_command.dart';
+import 'package:briscola/game/components/card.dart' as game;
+import 'package:briscola/game/components/deck_pile.dart';
+import 'package:briscola/game/components/hand.dart';
 import 'package:briscola/game/components/playing_surface.dart';
 import 'package:briscola/game/game_result.dart';
 import 'package:briscola/game/states/game_context.dart';
@@ -27,9 +30,6 @@ class _GameScreenState extends State<GameScreen> {
   late final BriscolaGame _game;
   late final StateMachine _stateMachine;
 
-  late final PlayCardCommand _playCardCommand;
-  late final DrawCardCommand _drawCardCommand;
-
   StreamSubscription? _gameStateChangedSubscription;
 
   @override
@@ -46,33 +46,41 @@ class _GameScreenState extends State<GameScreen> {
     });
 
     _stateMachine = StateMachine(gameContext);
-    final world = BriscolaWorld(Random().nextInt(256), _stateMachine);
-
-    _playCardCommand = PlayCardCommand(
-      gameContext.playingSurface,
-      world.applyPlayCard,
-    );
-
-    _drawCardCommand = DrawCardCommand(gameContext.deck, world.applyDrawCard);
 
     gameContext.deck.onDrawCard = () {
-      _drawCardCommand.execute(gameContext.playerHand);
+      _processDrawCard(gameContext.playerHand);
     };
 
     gameContext.playerHand.onPlayCard = (card) {
-      _playCardCommand.execute(gameContext.playerHand, card);
+      _processPlayCard(gameContext.playerHand, card);
     };
 
     _gameStateChangedSubscription = _stateMachine.stateChanged.listen((state) {
       if (state is OpponentTurnState) {
         final hand = _stateMachine.context.opponentHand;
-        _playCardCommand.execute(hand, hand.cards.last);
+        _processPlayCard(hand, hand.cards.last);
       } else if (state is OpponentDrawState) {
-        _drawCardCommand.execute(_stateMachine.context.opponentHand);
+        _processDrawCard(_stateMachine.context.opponentHand);
       }
     });
 
-    _game = BriscolaGame(world);
+    _game = BriscolaGame(BriscolaWorld(Random().nextInt(256), _stateMachine));
+  }
+
+  void _processPlayCard(Hand hand, game.Card card) {
+    PlayingSurface surface = _stateMachine.context.playingSurface;
+    if (hand.isEnabled && surface.canAcquireCard(hand.type)) {
+      CommandInvoker.execute(MoveCommand(hand, surface, card));
+      _stateMachine.transitionTo(_stateMachine.turnEndState);
+    }
+  }
+
+  void _processDrawCard(Hand hand) {
+    DeckPile deck = _stateMachine.context.deck;
+    if (!deck.isEmpty) {
+      CommandInvoker.execute(MoveCommand(deck, hand, deck.topCard));
+      _stateMachine.transitionTo(_stateMachine.drawEndState);
+    }
   }
 
   @override

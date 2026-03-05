@@ -181,24 +181,4 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
     _gameContext.briscolaSuit = restCards[index].suit.type;
     _deck.setBriscola(index);
   }
-
-  Future<void> applyPlayCard(Hand hand, Card card) {
-    _surface.acquireCard(hand.removeCard(card), hand.type);
-    return _stateMachine.transitionTo(_stateMachine.turnEndState);
-  }
-
-  void applyDrawCard(Hand hand) {
-    _deck.drawCard(hand);
-    GameState nextState;
-    if (hand.type == PlayerType.local) {
-      nextState = _opponentHand.canAcquireCard()
-          ? _stateMachine.opponentDrawState
-          : _stateMachine.opponentTurnState;
-    } else {
-      nextState = _playerHand.canAcquireCard()
-          ? _stateMachine.playerDrawState
-          : _stateMachine.playerTurnState;
-    }
-    _stateMachine.transitionTo(nextState);
-  }
 }

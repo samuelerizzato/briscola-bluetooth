@@ -1,7 +1,8 @@
 import 'dart:math';
 import 'dart:developer' as dev;
-import 'package:briscola/game/commands/draw_card_command.dart';
-import 'package:briscola/game/commands/play_card_command.dart';
+import 'package:briscola/game/commands/command_invoker.dart';
+import 'package:briscola/game/commands/move_command.dart';
+import 'package:briscola/game/components/deck_pile.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
@@ -34,10 +35,6 @@ class HostGameScreen extends StatefulWidget {
 class _HostGameScreenState extends State<HostGameScreen> {
   late final BriscolaGame _game;
   late final StateMachine _stateMachine;
-
-  late final PlayCardCommand _playCardCommand;
-  late final DrawCardCommand _drawCardCommand;
-
   late final BleGamePeripheralService _service;
 
   @override
@@ -74,14 +71,6 @@ class _HostGameScreenState extends State<HostGameScreen> {
     });
 
     _stateMachine = StateMachine(gameContext);
-    final world = BriscolaWorld(seed, _stateMachine, _handleSetup);
-
-    _playCardCommand = PlayCardCommand(
-      gameContext.playingSurface,
-      world.applyPlayCard,
-    );
-
-    _drawCardCommand = DrawCardCommand(gameContext.deck, world.applyDrawCard);
 
     gameContext.deck.onDrawCard = _handleLocalDrawCard;
     gameContext.playerHand.onPlayCard = _handleLocalPlayCard;
@@ -92,25 +81,44 @@ class _HostGameScreenState extends State<HostGameScreen> {
       _handleRemotePlayCard,
       _handleRemoteResign,
     );
-    _game = BriscolaGame(world);
+    _game = BriscolaGame(BriscolaWorld(seed, _stateMachine, _handleSetup));
   }
 
   void _handleLocalPlayCard(game.Card card) async {
     Hand hand = _stateMachine.context.playerHand;
-    _playCardCommand.execute(hand, card);
+    _processPlayCard(hand, card);
+
     try {
       await _service.sendPlayCardAction(card, hand.type);
     } catch (e) {
-      SnackbarManager.show("Error while sending update");
+      SnackbarManager.show("Error while sending card play");
+    }
+  }
+
+  void _processPlayCard(Hand hand, game.Card card) {
+    PlayingSurface surface = _stateMachine.context.playingSurface;
+    if (hand.isEnabled && surface.canAcquireCard(hand.type)) {
+      CommandInvoker.execute(MoveCommand(hand, surface, card));
+      _stateMachine.transitionTo(_stateMachine.turnEndState);
     }
   }
 
   void _handleLocalDrawCard() async {
-    _drawCardCommand.execute(_stateMachine.context.playerHand);
+    Hand hand = _stateMachine.context.playerHand;
+    _processDrawCard(hand);
+
     try {
-      await _service.sendDrawCardAction(_stateMachine.context.playerHand.type);
+      await _service.sendDrawCardAction(hand.type);
     } catch (e) {
-      SnackbarManager.show("Error while sending update");
+      SnackbarManager.show("Error while sending draw card");
+    }
+  }
+
+  void _processDrawCard(Hand hand) {
+    DeckPile deck = _stateMachine.context.deck;
+    if (!deck.isEmpty) {
+      CommandInvoker.execute(MoveCommand(deck, hand, deck.topCard));
+      _stateMachine.transitionTo(_stateMachine.drawEndState);
     }
   }
 
@@ -126,7 +134,7 @@ class _HostGameScreenState extends State<HostGameScreen> {
   }
 
   void _handleRemoteDraw(DrawCardMessage message) async {
-    _drawCardCommand.execute(_stateMachine.context.opponentHand);
+    _processDrawCard(_stateMachine.context.opponentHand);
     try {
       await _service.sendDrawCardAction(PlayerType.remote);
     } catch (e) {
@@ -135,7 +143,7 @@ class _HostGameScreenState extends State<HostGameScreen> {
   }
 
   Future<void> _handleRemotePlayCard(CardPlayMessage message) async {
-    _playCardCommand.execute(_stateMachine.context.opponentHand, message.card);
+    _processPlayCard(_stateMachine.context.opponentHand, message.card);
     try {
       await _service.sendPlayCardAction(message.card, PlayerType.remote);
     } catch (e) {
