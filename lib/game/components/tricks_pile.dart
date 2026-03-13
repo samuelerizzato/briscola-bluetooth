@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:briscola/game/components/playing_surface.dart';
+import 'package:briscola/game/states/game_state.dart';
+import 'package:briscola/game/states/state_machine.dart';
 import 'package:flutter/material.dart' as material;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
@@ -16,8 +19,9 @@ class TricksPile extends PositionComponent
   late final TextComponent scoreText;
   bool isActive = false;
   final Paint _activeBackgroundPaint;
+  final PlayerType _type;
 
-  TricksPile(Color activeColor)
+  TricksPile(Color activeColor, this._type)
     : _activeBackgroundPaint = Paint()
         ..color = activeColor.withAlpha(0x88)
         ..style = PaintingStyle.stroke
@@ -95,5 +99,11 @@ class TricksPile extends PositionComponent
   @override
   Card removeCard(Card card) {
     throw StateError('Cannot remove card from tricks pile');
+  }
+
+  void onGameStateChanged(GameState state) {
+    isActive =
+        _type == state.currentHand.type &&
+        (state.phase == GamePhase.play || state.phase == GamePhase.draw);
   }
 }

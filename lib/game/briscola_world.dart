@@ -1,21 +1,15 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flame/flame.dart';
+import 'package:flame/components.dart';
 
-import 'package:briscola/game/components/deck_pile.dart';
-import 'package:briscola/game/components/player_hand.dart';
-import 'package:briscola/game/components/tricks_pile.dart';
-import 'package:briscola/game/states/game_state.dart';
 import 'package:briscola/game/rank.dart';
 import 'package:briscola/game/states/game_context.dart';
 import 'package:briscola/game/states/state_machine.dart';
-import 'package:flame/flame.dart';
-import 'package:flame/components.dart';
 import 'package:briscola/game/briscola_game.dart';
 import 'package:briscola/game/suit.dart';
 import 'package:briscola/game/components/card.dart';
-import 'package:briscola/game/components/playing_surface.dart';
-
-import 'components/hand.dart';
+import 'package:briscola/game/components/hand.dart';
 
 class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
   static const double boardWidth = 400.0;
@@ -33,27 +27,14 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
 
   final List<Card> _cards = [];
   final int _initialSeed;
-  late final StateMachine _stateMachine;
+  final StateMachine _stateMachine;
+  final GameContext _gameContext;
   final void Function()? _onSetup;
-
-  GameContext get _gameContext => _stateMachine.context;
-
-  DeckPile get _deck => _stateMachine.context.deck;
-
-  PlayingSurface get _surface => _stateMachine.context.playingSurface;
-
-  PlayerHand get _playerHand => _stateMachine.context.playerHand;
-
-  Hand get _opponentHand => _stateMachine.context.opponentHand;
-
-  TricksPile get _playerTricksPile => _stateMachine.context.playerTricksPile;
-
-  TricksPile get _opponentTricksPile =>
-      _stateMachine.context.opponentTricksPile;
 
   BriscolaWorld(
     this._initialSeed,
-    this._stateMachine, [
+    this._stateMachine,
+    this._gameContext, [
     this._onSetup,
   ]);
 
@@ -70,60 +51,55 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
       'king.png',
     ]);
 
-    _deck
+    _gameContext.deck
       ..priority = 41
       ..size = cardSize
       ..position = Vector2(0.0, boardHeight - cardHeight * 2.0 - cardGap);
 
-    _surface
+    _gameContext.playingSurface
       ..size = surfaceSize
       ..position = Vector2(
         boardWidth / 2.0 - (cardWidth + cardGap / 2.0),
         boardHeight / 2.0 - (cardHeight / 2.0),
       );
 
-    _playerHand
+    _gameContext.playerHand
       ..size = Vector2(cardWidth * 3.0 + cardGap * 2.0, cardHeight)
       ..position = Vector2(
         boardWidth / 2.0 - ((cardWidth * 3.0) / 2.0 + cardGap),
         boardHeight - cardHeight,
       );
 
-    _opponentHand
+    _gameContext.opponentHand
       ..size = Vector2(cardWidth * 3.0 + cardGap * 2.0, cardHeight)
       ..position = Vector2(
         boardWidth / 2.0 - ((cardWidth * 3.0) / 2.0 + cardGap),
         0,
       );
 
-    _playerTricksPile
+    _gameContext.playerTricksPile
       ..size = cardSize
       ..priority = 41
       ..position = Vector2(
         boardWidth - cardWidth,
-        _playerHand.y - cardHeight - cardGap,
+        _gameContext.playerHand.y - cardHeight - cardGap,
       );
 
-    _opponentTricksPile
+    _gameContext.opponentTricksPile
       ..size = cardSize
       ..priority = 41
       ..position = Vector2(
         boardWidth - cardWidth,
-        _opponentHand.y + cardHeight + cardGap,
+        _gameContext.opponentHand.y + cardHeight + cardGap,
       );
 
-    add(_deck);
-    add(_surface);
-    add(_playerHand);
-    add(_opponentHand);
-    add(_playerTricksPile);
-    add(_opponentTricksPile);
+    add(_gameContext.deck);
+    add(_gameContext.playingSurface);
+    add(_gameContext.playerHand);
+    add(_gameContext.opponentHand);
+    add(_gameContext.playerTricksPile);
+    add(_gameContext.opponentTricksPile);
     setup();
-
-    GameState initialState = _gameContext.leadPlayer == PlayerType.local
-        ? _stateMachine.playerTurnState
-        : _stateMachine.opponentTurnState;
-    _stateMachine.initialize(initialState);
   }
 
   Future<void> setup() async {
@@ -143,28 +119,15 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
     addAll(_cards);
   }
 
-  void _initCamera() {
-    game.camera.viewfinder.visibleGameSize = Vector2(boardWidth, boardHeight);
-    game.camera.viewfinder.position = Vector2(
-      boardWidth / 2.0,
-      boardHeight / 2.0,
-    );
-    game.camera.viewfinder.anchor = Anchor.center;
-  }
-
   void _dealCards(int seed) {
-    Hand hand = _gameContext.leadPlayer == PlayerType.local
-        ? _playerHand
-        : _opponentHand;
+    Hand hand = _stateMachine.currentState.currentHand;
     int lastCardIndex = _cards.length - 1;
     for (int i = 0; i < hand.maxSize; i++) {
       hand.acquireCard(_cards[lastCardIndex - i]);
     }
 
     lastCardIndex -= hand.maxSize;
-    hand = _gameContext.leadPlayer == PlayerType.local
-        ? _opponentHand
-        : _playerHand;
+    hand = _stateMachine.currentState.nextHand;
 
     for (int i = 0; i < hand.maxSize; i++) {
       hand.acquireCard(_cards[lastCardIndex - i]);
@@ -173,12 +136,24 @@ class BriscolaWorld extends World with HasGameReference<BriscolaGame> {
     lastCardIndex -= hand.maxSize;
 
     List<Card> restCards = _cards.sublist(0, lastCardIndex + 1);
-    for (var card in restCards) {
-      _deck.acquireCard(card);
+    List<int> briscolaSuitIndexes = [];
+    for (int i = 0; i < restCards.length; i++) {
+      _gameContext.deck.acquireCard(restCards[i]);
+      if (restCards[i].suit.type == _gameContext.briscolaSuit) {
+        briscolaSuitIndexes.add(i);
+      }
     }
 
-    int index = Random(seed).nextInt(restCards.length);
-    _gameContext.briscolaSuit = restCards[index].suit.type;
-    _deck.setBriscola(index);
+    int randomIndex = Random(seed).nextInt(briscolaSuitIndexes.length);
+    _gameContext.deck.setBriscola(briscolaSuitIndexes[randomIndex]);
+  }
+
+  void _initCamera() {
+    game.camera.viewfinder.visibleGameSize = Vector2(boardWidth, boardHeight);
+    game.camera.viewfinder.position = Vector2(
+      boardWidth / 2.0,
+      boardHeight / 2.0,
+    );
+    game.camera.viewfinder.anchor = Anchor.center;
   }
 }

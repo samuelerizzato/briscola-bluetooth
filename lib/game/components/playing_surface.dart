@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:briscola/game/briscola_world.dart';
@@ -16,6 +17,10 @@ class PlayingSurface extends PositionComponent implements CardHolder {
   };
 
   PlayerType _activeSlot = PlayerType.local;
+
+  final StreamController<void> _surfaceChangesController =
+    StreamController<void>.broadcast();
+  Stream<void> get surfaceChanges => _surfaceChangesController.stream;
 
   static final Paint backgroundPaint = Paint()..color = const Color(0xffffd700);
   static final Paint innerBackgroundPaint = Paint()
@@ -43,40 +48,12 @@ class PlayingSurface extends PositionComponent implements CardHolder {
     }
     card.position = cardPosition;
     _slots[_activeSlot] = card;
+    _surfaceChangesController.add(null);
   }
 
   void setActiveSlot(PlayerType type) {
     _activeSlot = type;
   }
-
-  /*Future<void> moveCardsTo(TricksPile pile) async {
-    assert(
-      _slots[PlayerType.local] != null && _slots[PlayerType.remote] != null,
-    );
-
-    final completer = Completer();
-
-    Card playerCard = _slots[PlayerType.local]!;
-    Card opponentCard = _slots[PlayerType.remote]!;
-
-    addMoveEffectToCard(playerCard, pile.position, () {
-      pile.acquireCard(playerCard);
-      _slots[PlayerType.local] = null;
-      if (_slots.values.every((card) => card == null)) {
-        completer.complete();
-      }
-    });
-
-    addMoveEffectToCard(opponentCard, pile.position, () {
-      pile.acquireCard(opponentCard);
-      _slots[PlayerType.remote] = null;
-      if (_slots.values.every((card) => card == null)) {
-        completer.complete();
-      }
-    });
-
-    return completer.future;
-  }*/
 
   void addMoveEffectToCard(Card card, Vector2 to, VoidCallback onComplete) {
     final dt = (to - card.position).length / (10.0 * card.width);
@@ -103,6 +80,12 @@ class PlayingSurface extends PositionComponent implements CardHolder {
   void render(Canvas canvas) {
     canvas.drawRRect(surfaceRRect, backgroundPaint);
     canvas.drawRRect(innerSurfaceRRect, innerBackgroundPaint);
+  }
+
+  @override
+  void onRemove() {
+    _surfaceChangesController.close();
+    super.onRemove();
   }
 
   @override

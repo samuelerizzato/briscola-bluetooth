@@ -10,15 +10,19 @@ import 'ble_message.dart';
 class CardPlayMessage implements BleMessage {
   final Card card;
   final PlayerType playerType;
-  static const int _rankIndex = 0;
-  static const int _suitIndex = 1;
-  static const int _playerTypeIndex = 2;
+
+  static const int eventType = 1;
+  static const int _rankIndex = 1;
+  static const int _suitIndex = 2;
+  static const int _playerTypeIndex = 3;
 
   CardPlayMessage(this.card, this.playerType);
+
 
   @override
   Uint8List toBytes() {
     final builder = BytesBuilder();
+    builder.addByte(eventType);
     builder.add(Conversions.rankToUint8List(card.rank));
     builder.add(Conversions.suitTypeToUint8List(card.suit.type));
     builder.add(Conversions.boolToUint8List(playerType == PlayerType.remote));

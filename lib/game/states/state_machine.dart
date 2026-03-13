@@ -1,62 +1,56 @@
 import 'dart:async';
 
-import 'package:briscola/game/states/decide_state.dart';
-import 'package:briscola/game/states/draw_end_state.dart';
-import 'package:briscola/game/states/game_context.dart';
-import 'package:briscola/game/states/game_over_state.dart';
+import 'package:briscola/game/game_result.dart';
 import 'package:briscola/game/states/game_state.dart';
-import 'package:briscola/game/states/player_turn_state.dart';
-import 'package:briscola/game/states/opponent_draw_state.dart';
-import 'package:briscola/game/states/opponent_turn_state.dart';
-import 'package:briscola/game/states/player_draw_state.dart';
-import 'package:briscola/game/states/turn_end_state.dart';
+
+enum GamePhase {
+  initial,
+  draw,
+  play,
+  trickEnd,
+  gameOver,
+}
 
 class StateMachine {
   GameState? _currentState;
-
-  final GameContext _context;
-
-  final PlayerDrawState playerDrawState;
-  final OpponentDrawState opponentDrawState;
-  final DrawEndState drawEndState;
-  final PlayerTurnState playerTurnState;
-  final OpponentTurnState opponentTurnState;
-  final TurnEndState turnEndState;
-  final DecideState decideState;
-  final GameOverState gameOverState;
 
   final StreamController<GameState> _stateChangeController =
       StreamController<GameState>.broadcast();
 
   Stream<GameState> get stateChanged => _stateChangeController.stream;
 
-  GameState? get currentState => _currentState;
+  GameState get currentState => _currentState!;
 
-  GameContext get context => _context;
+  void Function(GameResult) onGameOver;
 
-  StateMachine(this._context)
-    : playerDrawState = PlayerDrawState(),
-      opponentDrawState = OpponentDrawState(),
-      drawEndState = DrawEndState(),
-      playerTurnState = PlayerTurnState(),
-      opponentTurnState = OpponentTurnState(),
-      turnEndState = TurnEndState(),
-      decideState = DecideState(),
-      gameOverState = GameOverState();
+  StateMachine(this._currentState, this.onGameOver);
 
-  Future<void> initialize(GameState state) async {
-    _currentState = state;
-    await state.enter(this);
-
-    _stateChangeController.add(state);
+  Future<void> initialize(GameState nextState) async {
+    _currentState = nextState;
+    _stateChangeController.add(nextState);
   }
 
   Future<void> transitionTo(GameState nextState) async {
-    await _currentState?.exit(this);
     _currentState = nextState;
-    await nextState.enter(this);
-
     _stateChangeController.add(nextState);
+
+    if (nextState.phase == GamePhase.gameOver) {
+      _handleGameOver(nextState);
+    }
+  }
+
+  void _handleGameOver(GameState state) {
+    onGameOver(
+      GameResult(
+        state.playerScore > state.opponentScore
+            ? GameOutcome.win
+            : state.playerScore < state.opponentScore
+            ? GameOutcome.loss
+            : GameOutcome.draw,
+        points: state.playerScore,
+        opponentPoints: state.opponentScore,
+      ),
+    );
   }
 
   void dispose() {

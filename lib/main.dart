@@ -9,6 +9,7 @@ void main() {
   runApp(
     MaterialApp(
       title: 'Briscola',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: 'LilitaOne',
         appBarTheme: AppBarThemeData(

@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:briscola/game/briscola_world.dart';
 import 'package:briscola/game/card_holder.dart';
 import 'package:briscola/game/components/card.dart';
+import 'package:briscola/game/components/playing_surface.dart';
+import 'package:briscola/game/states/game_state.dart';
+import 'package:briscola/game/states/state_machine.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 
@@ -15,9 +20,10 @@ class DeckPile extends PositionComponent
 
   Card get topCard => _cards.last;
 
-  set isEnabled(bool value) {
-    _isEnabled = value;
-  }
+  final StreamController<void> _deckChangesController =
+      StreamController<void>.broadcast();
+
+  Stream<void> get deckChanges => _deckChangesController.stream;
 
   @override
   void acquireCard(Card card) {
@@ -32,18 +38,11 @@ class DeckPile extends PositionComponent
     onDrawCard?.call();
   }
 
-  /*void drawCard(Hand hand) {
-    assert(_cards.isNotEmpty);
-    if (!hand.canAcquireCard()) return;
-
-    hand.acquireCard(_cards.removeLast());
-
-    if (_cards.length == 1) {
-      _cards.first.flip();
-      _cards.first.position = position;
-      _cards.first.angle = 0;
-    }
-  }*/
+  void onGameStateChanged(GameState state) {
+    _isEnabled =
+        state.phase == GamePhase.draw &&
+        state.currentHand.type == PlayerType.local;
+  }
 
   void setBriscola(int index) {
     assert(_cards.isNotEmpty && index < _cards.length && index >= 0);
@@ -63,18 +62,20 @@ class DeckPile extends PositionComponent
 
   @override
   Card removeCard(Card card) {
-    Card topCard = _cards.last;
-    if (topCard.rank.value != card.rank.value ||
-        topCard.suit.type != card.suit.type) {
-      throw StateError('Could not find card ${card.rank} ${card.suit.type}');
+    if (_cards.last.rank.value != card.rank.value ||
+        _cards.last.suit.type != card.suit.type) {
+      throw StateError(
+        'Cannot remove card ${card.rank} ${card.suit.type} because is not on top',
+      );
     }
 
-    topCard = _cards.removeLast();
+    Card topCard = _cards.removeLast();
     if (_cards.length == 1) {
       _cards.first.flip();
       _cards.first.position = position;
       _cards.first.angle = 0;
     }
+    _deckChangesController.add(null);
     return topCard;
   }
 }

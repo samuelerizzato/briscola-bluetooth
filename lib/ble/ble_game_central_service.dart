@@ -5,11 +5,15 @@ import 'dart:typed_data';
 
 import 'package:briscola/ble/ble_game_service.dart';
 import 'package:briscola/ble/conversions.dart';
+import 'package:briscola/ble/messages/ble_message.dart';
 import 'package:briscola/ble/messages/card_play_message.dart';
 import 'package:briscola/ble/messages/draw_card_message.dart';
 import 'package:briscola/ble/messages/game_setup_message.dart';
+import 'package:briscola/ble/messages/resign_message.dart';
+import 'package:briscola/ble/messages/start_game_message.dart';
 import 'package:briscola/game/components/card.dart';
 import 'package:briscola/game/components/playing_surface.dart';
+import 'package:briscola/ui/message_handler_registry.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'ble_gatt_services.dart';
@@ -20,29 +24,21 @@ class BleGameCentralService implements BleGameService {
   final notificationQueue = Queue<List<int>>();
   bool processing = false;
 
-  late final StreamSubscription _gameStateSubscription;
-  void Function()? _onOpponentResignNotification;
-  void Function(DrawCardMessage message)? _onDrawCardNotification;
-  Future<void> Function(CardPlayMessage message)? _onPlayCardNotification;
+  StreamSubscription? _gameStateSubscription;
+  late final MessageHandlerRegistry _registry;
 
   BleGameCentralService(this._device);
 
   @override
-  void registerOpponentEventHandlers(
-    void Function(DrawCardMessage message) onDrawCard,
-    Future<void> Function(CardPlayMessage message) onPlayCard,
-    void Function() onResign,
-  ) {
-    _onDrawCardNotification = onDrawCard;
-    _onPlayCardNotification = onPlayCard;
-    _onOpponentResignNotification = onResign;
+  void setRegistry(MessageHandlerRegistry registry) {
+    _registry = registry;
   }
 
   Future<void> discoverDeviceServices() async {
     _services = await _device.discoverServices();
   }
 
-  void subscribeToGameStateCharacteristic() async {
+  Future<void> subscribeToGameStateCharacteristic() async {
     Guid gameStateServiceId = Conversions.uuidToGuid(
       BleGattServices.gameStateServiceUuid,
     );
@@ -54,7 +50,10 @@ class BleGameCentralService implements BleGameService {
         .characteristics
         .firstWhere((chara) => chara.uuid == gameStateCharaId);
 
-    await gameStateCharacteristic.setNotifyValue(true);
+    if (!gameStateCharacteristic.isNotifying) {
+      await gameStateCharacteristic.setNotifyValue(true);
+    }
+    log('subscribing to game state characteristic');
     _gameStateSubscription = gameStateCharacteristic.onValueReceived.listen(
       _handleValueReceived,
     );
@@ -62,25 +61,16 @@ class BleGameCentralService implements BleGameService {
 
   void _handleValueReceived(List<int> bytes) async {
     notificationQueue.add(bytes);
-    log('Processing value $processing');
+
     if (processing) return;
     processing = true;
 
     while (notificationQueue.isNotEmpty) {
-      final notificationBytes = notificationQueue.removeFirst();
-      if (notificationBytes.isEmpty) {
-        _onOpponentResignNotification?.call();
-      } else if (notificationBytes.length < 2) {
-        _onDrawCardNotification?.call(
-          DrawCardMessage.fromBytes(Uint8List.fromList(notificationBytes)),
-        );
-      } else {
-        await _onPlayCardNotification?.call(
-          CardPlayMessage.fromBytes(Uint8List.fromList(notificationBytes)),
-        );
-      }
+      final queueBytes = notificationQueue.removeFirst();
+      final handler = _registry.getHandler(queueBytes[0]);
+      await handler(Uint8List.fromList(queueBytes));
     }
-    log('exiting value received');
+
     processing = false;
   }
 
@@ -104,8 +94,7 @@ class BleGameCentralService implements BleGameService {
     return GameSetupMessage.fromBytes(Uint8List.fromList(bytes));
   }
 
-  @override
-  Future<void> sendDrawCardAction(PlayerType player) {
+  Future<void> _sendToGameStateCharacteristic(BleMessage message) {
     Guid gameStateServiceId = Conversions.uuidToGuid(
       BleGattServices.gameStateServiceUuid,
     );
@@ -118,47 +107,23 @@ class BleGameCentralService implements BleGameService {
         .characteristics
         .firstWhere((chara) => chara.uuid == gameStateCharaId);
 
-    return retryRequest(
-      () => gameStateCharacteristic.write(DrawCardMessage(player).toBytes()),
-    );
+    return retryRequest(() => gameStateCharacteristic.write(message.toBytes()));
   }
+
+  Future<void> sendStartGameRequest() =>
+      _sendToGameStateCharacteristic(StartGameMessage());
 
   @override
-  Future<void> sendPlayCardAction(Card card, PlayerType player) async {
-    Guid gameStateServiceId = Conversions.uuidToGuid(
-      BleGattServices.gameStateServiceUuid,
-    );
-    Guid gameStateCharaId = Conversions.uuidToGuid(
-      BleGattServices.gameStateCharacteristic.uuid,
-    );
-    BluetoothCharacteristic gameStateCharacteristic = _services
-        .firstWhere((service) => service.uuid == gameStateServiceId)
-        .characteristics
-        .firstWhere((chara) => chara.uuid == gameStateCharaId);
-
-    return retryRequest(
-      () => gameStateCharacteristic.write(
-        CardPlayMessage(card, player).toBytes().toList(),
-      ),
-    );
-  }
+  Future<void> sendDrawCardAction(PlayerType player) =>
+      _sendToGameStateCharacteristic(DrawCardMessage(player));
 
   @override
-  Future<void> sendGameResign() {
-    Guid gameStateServiceId = Conversions.uuidToGuid(
-      BleGattServices.gameStateServiceUuid,
-    );
-    Guid gameStateCharaId = Conversions.uuidToGuid(
-      BleGattServices.gameStateCharacteristic.uuid,
-    );
+  Future<void> sendPlayCardAction(Card card, PlayerType player) =>
+      _sendToGameStateCharacteristic(CardPlayMessage(card, player));
 
-    BluetoothCharacteristic gameStateCharacteristic = _services
-        .firstWhere((service) => service.uuid == gameStateServiceId)
-        .characteristics
-        .firstWhere((chara) => chara.uuid == gameStateCharaId);
-
-    return retryRequest(() => gameStateCharacteristic.write([]));
-  }
+  @override
+  Future<void> sendGameResign() =>
+      _sendToGameStateCharacteristic(ResignMessage());
 
   Future<void> retryRequest(Future<void> Function() request) async {
     Exception? error;
@@ -173,6 +138,7 @@ class BleGameCentralService implements BleGameService {
   }
 
   void dispose() {
-    _gameStateSubscription.cancel();
+    _gameStateSubscription?.cancel();
+    _gameStateSubscription = null;
   }
 }

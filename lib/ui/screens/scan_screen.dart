@@ -128,12 +128,13 @@ class _ScanScreenState extends State<ScanScreen> {
       final gameLoadedCharacteristicId = Conversions.uuidToGuid(
         BleGattServices.gameLoadedCharacteristic.uuid,
       );
-
       final BluetoothCharacteristic gameLoadedCharacteristic = services
           .firstWhere((service) => service.uuid == gameStateServiceId)
           .characteristics
           .firstWhere((chara) => chara.uuid == gameLoadedCharacteristicId);
+
       gameLoadedCharacteristic.setNotifyValue(true);
+
       _gameCharacteristicSubscription = gameLoadedCharacteristic.onValueReceived
           .listen((data) {
             handleValueReceived(data, device);
@@ -148,9 +149,13 @@ class _ScanScreenState extends State<ScanScreen> {
           .characteristics
           .firstOrNull;
       await gameStartCharacteristic?.write(Conversions.boolToUint8List(true));
+    } on FlutterBluePlusException catch (e) {
+      SnackbarManager.show(
+        'Error: ${e.description ?? 'during game connection setup'}',
+      );
     } catch (e) {
       log(e.toString());
-      SnackbarManager.show('Error during connection setup');
+      SnackbarManager.show('Application error, something went wrong');
     }
   }
 
@@ -160,9 +165,9 @@ class _ScanScreenState extends State<ScanScreen> {
     final centralService = BleGameCentralService(device);
     try {
       final response = await sendGameSetupRequest(centralService);
-      centralService.subscribeToGameStateCharacteristic();
       navigateToGamePage(centralService, response, CentralConnection(device));
     } catch (e) {
+      log(e.toString());
       SnackbarManager.show('Error during game setup');
     }
   }

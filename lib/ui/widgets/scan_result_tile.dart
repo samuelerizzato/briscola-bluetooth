@@ -60,7 +60,6 @@ class _ScanResultTileState extends State<ScanResultTile> {
       subtitle: device.platformName.isNotEmpty
           ? Text(
               '${device.platformName}, ${isConnected ? 'Connected' : 'Not connected'}',
-              overflow: TextOverflow.ellipsis,
             )
           : null,
       trailing: Visibility(

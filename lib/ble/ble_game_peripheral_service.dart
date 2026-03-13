@@ -8,8 +8,13 @@ import 'package:briscola/ble/conversions.dart';
 import 'package:briscola/ble/messages/card_play_message.dart';
 import 'package:briscola/ble/messages/draw_card_message.dart';
 import 'package:briscola/ble/messages/game_setup_message.dart';
+import 'package:briscola/ble/messages/resign_message.dart';
+import 'package:briscola/ble/messages/game_state_message.dart';
+import 'package:briscola/ble/messages/trick_end_message.dart';
 import 'package:briscola/game/components/card.dart';
 import 'package:briscola/game/components/playing_surface.dart';
+import 'package:briscola/game/states/game_state.dart';
+import 'package:briscola/ui/message_handler_registry.dart';
 
 import 'ble_gatt_services.dart';
 
@@ -18,23 +23,15 @@ class BleGamePeripheralService implements BleGameService {
   final Central _central;
   late final StreamSubscription _gameStateReadRequestSubscription;
   late final StreamSubscription _gameStateWriteRequestSubscription;
-  void Function()? _onResignRequest;
-  void Function(DrawCardMessage message)? _onDrawCardWriteRequest;
-  Future<void> Function(CardPlayMessage message)? _onPlayCardWriteRequest;
+  late final MessageHandlerRegistry _registry;
   final int _seed;
   final PlayerType _leadPlayer;
 
   BleGamePeripheralService(this._central, this._seed, this._leadPlayer);
 
   @override
-  void registerOpponentEventHandlers(
-    void Function(DrawCardMessage message) onDrawCard,
-    Future<void> Function(CardPlayMessage message) onPlayCard,
-    void Function() onResign,
-  ) {
-    _onDrawCardWriteRequest = onDrawCard;
-    _onPlayCardWriteRequest = onPlayCard;
-    _onResignRequest = onResign;
+  void setRegistry(MessageHandlerRegistry registry) {
+    _registry = registry;
   }
 
   Future<void> setupBleGame() async {
@@ -99,13 +96,8 @@ class BleGamePeripheralService implements BleGameService {
     await _manager.respondWriteRequest(args.request);
 
     Uint8List bytes = args.request.value;
-    if (bytes.isEmpty) {
-      _onResignRequest?.call();
-    } else if (bytes.length < 2) {
-      _onDrawCardWriteRequest?.call(DrawCardMessage.fromBytes(bytes));
-    } else {
-      _onPlayCardWriteRequest?.call(CardPlayMessage.fromBytes(bytes));
-    }
+    final handler = _registry.getHandler(bytes[0]);
+    handler(bytes);
   }
 
   @override
@@ -127,12 +119,34 @@ class BleGamePeripheralService implements BleGameService {
         ),
       );
 
+  Future<void> sendTrickEndEvent(PlayerType winner) => _retryRequest(
+    () => _manager.notifyCharacteristic(
+      _central,
+      BleGattServices.gameStateCharacteristic,
+      value: TrickEndMessage(winner).toBytes(),
+    ),
+  );
+
+  Future<void> sendGameStateUpdate(GameState state) => _retryRequest(
+    () => _manager.notifyCharacteristic(
+      _central,
+      BleGattServices.gameStateCharacteristic,
+      value: GameStateMessage(
+        state.currentHand.type,
+        state.nextHand.type,
+        state.phase,
+        state.playerScore,
+        state.opponentScore,
+      ).toBytes(),
+    ),
+  );
+
   @override
   Future<void> sendGameResign() => _retryRequest(
     () => _manager.notifyCharacteristic(
       _central,
       BleGattServices.gameStateCharacteristic,
-      value: Uint8List(0),
+      value: ResignMessage().toBytes(),
     ),
   );
 
@@ -142,6 +156,7 @@ class BleGamePeripheralService implements BleGameService {
       try {
         return await request();
       } on Exception catch (e) {
+        log(e.toString());
         error = e;
       }
     }
